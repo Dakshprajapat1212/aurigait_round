@@ -11,6 +11,7 @@
     "dev:backend": "npm --prefix backend start",
     "dev:frontend": "npm --prefix frontend run dev",
     "demo": "npm --prefix backend run demo",
+    "test:import": "npm --prefix backend run build && node scripts/test_import.js",
     "export:logs": "node scripts/export_ai_logs.js"
   },
   "repository": {

@@ -1,0 +1,18 @@
+[
+  { "name": "Silver", "price": "₹150", "availableSeats": 50 },
+  { "name": "silver", "price": 150, "availableSeats": 50 },
+  { "name": "SILVER", "price": "₹150.00", "availableSeats": 50 },
+  { "name": "silver", "price": 175, "availableSeats": 50 },
+  { "name": "GOLD", "price": 250, "availableSeats": 30 },
+  { "name": "Gold", "price": "₹250", "availableSeats": 30 },
+  { "name": "GOLD", "price": 300, "availableSeats": 30 },
+  { "name": "Recliner", "price": "₹400.50", "availableSeats": 10 },
+  { "name": "recliner", "price": 400.50, "availableSeats": 10 },
+  { "name": "Balcony", "price": "350.50 INR", "availableSeats": 20 },
+  { "name": "Executive", "price": "180,50", "availableSeats": 15 },
+  { "name": "VIP", "price": "", "availableSeats": 20 },
+  { "name": "", "price": 200, "availableSeats": 10 },
+  { "name": "Premium", "price": -500, "availableSeats": 5 },
+  { "name": "FreePass", "price": 0, "availableSeats": 10 },
+  { "name": "Club", "price": "abc", "availableSeats": 15 }
+]

@@ -196,6 +196,28 @@ export class TierImporter {
   }
 
   /**
+   * Robust CSV line tokenizer that preserves empty tokens between commas and handles quoted values.
+   */
+  static parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let cur = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        inQuotes = !inQuotes;
+      } else if (ch === ',' && !inQuotes) {
+        result.push(cur.trim().replace(/^"|"$/g, ''));
+        cur = '';
+      } else {
+        cur += ch;
+      }
+    }
+    result.push(cur.trim().replace(/^"|"$/g, ''));
+    return result;
+  }
+
+  /**
    * Helper to parse raw CSV text into messy tier records.
    */
   static parseCSVToRawTiers(csvText: string): RawTierInput[] {
@@ -206,7 +228,7 @@ export class TierImporter {
     const startIndex = lines[0].toLowerCase().includes('name') ? 1 : 0;
 
     for (let i = startIndex; i < lines.length; i++) {
-      const parts = lines[i].split(',').map((p) => p.trim());
+      const parts = TierImporter.parseCSVLine(lines[i]);
       rawTiers.push({
         name: parts[0] !== undefined ? parts[0] : '',
         price: parts[1] !== undefined ? parts[1] : '',

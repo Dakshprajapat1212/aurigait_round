@@ -1,0 +1,17 @@
+name,price,availableSeats
+Silver, ₹150, 50
+silver, 150, 50
+SILVER, ₹150.00, 50
+silver, 175, 50
+GOLD, 250, 30
+Gold, ₹250, 30
+GOLD, 300, 30
+Recliner, ₹400.50, 10
+recliner, 400.50, 10
+Balcony, 350.50 INR, 20
+Executive, "180,50", 15
+VIP,, 20
+, 200, 10
+Premium, -500, 5
+FreePass, 0, 10
+Club, abc, 15
