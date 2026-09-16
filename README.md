@@ -77,74 +77,72 @@ aurigait_round/
 
 ---
 
-## Getting Started
+## ⚡ Evaluator Quick Testing Guide (Under 60 Seconds)
 
-### Prerequisites
-- Node.js (v18 or higher recommended)
-- npm (v9 or higher)
+To verify the entire project immediately:
 
-### 1. Run Automated Tests
-From the root directory:
+### 1. Run Automated Unit Tests (35 Tests Passing)
 ```bash
 npm test
 ```
-All 27 unit tests will execute, validating:
-- Integer paisa arithmetic and half-up rounding.
-- Single and multi-tier booking pricing.
-- Tier availability and sold-out guards.
-- Festival and member discount stacking and caps.
-- Convenience fee and GST calculations.
-- Exact reconciliation invariant.
+Runs all 35 test cases across 3 test suites:
+- `tests/money.test.ts` (Exact Paisa integer math, rounding half-up, formatting)
+- `tests/pricingEngine.test.ts` (Tiers, sold-out enforcement, discounts, fees, GST, exact reconciliation)
+- `tests/tierImporter.test.ts` (The Twist: case deduplication, format cleaning, rejection audit)
 
-### 2. Run the CLI Demo Calculation
+### 2. Test "The Twist" (Messy Price List Importer & Cleaner)
 ```bash
-npm run demo
+npm run test:import
 ```
-Output:
-```text
-------------------------------------------------------------
-  MULTIPLEX BOOKING INVOICE
-  Show: Friday Night Blockbuster [ID: SHOW-FRIDAY-001]
-------------------------------------------------------------
-  SEAT BREAKDOWN:
-    • Tier: Silver     | Qty:  2 ×   ₹150.00 =    ₹300.00
-    • Tier: Recliner   | Qty:  1 ×   ₹400.00 =    ₹400.00
-  Total Tickets: 3
-  Base Ticket Subtotal:                     ₹700.00
-------------------------------------------------------------
-  DISCOUNTS APPLIED:
-    • Festival Discount:               -     ₹50.00
-    • Member Discount:                 -     ₹65.00
-    Total Discount:                    -    ₹115.00
-  Net Ticket Subtotal:                      ₹585.00
-------------------------------------------------------------
-  CONVENIENCE & TAXES:
-    • Convenience Fee (3 × ₹30.00):         ₹90.00
-    • Taxable Base:                         ₹675.00
-    • GST (18%):                          ₹121.50
-------------------------------------------------------------
-  FINAL AMOUNT PAYABLE:                     ₹796.50
-------------------------------------------------------------
-```
+Processes [`sample_data/messy_prices.csv`](sample_data/messy_prices.csv) (containing mixed casing, whitespace, currency symbols, blank values, and negative numbers) and outputs the complete color-coded audit summary:
+- 🟢 **5 Accepted Clean Tiers**
+- 🟡 **4 De-duplicated Records**
+- 🔴 **7 Rejected Records** (with specific rejection reasons)
 
-### 3. Build Both Backend & Frontend
-```bash
-npm run build
-```
-
-### 4. Run the Fullstack Application (One Command)
-To launch both the Backend API (port 4000) and the React Counter UI (port 3000) concurrently with a single command:
+### 3. Run the Fullstack App & Test via Web UI
 ```bash
 npm run dev
 ```
-Open **`http://localhost:3000`** in your browser to interact with the live cinema counter interface.
+Open **`http://localhost:3000`** in your browser. Right at the top of the counter, use the **Evaluator Quick Actions**:
+1. Click **🎫 1-Click Test Booking**: Instantly loads 2 Silver + 1 Gold seats + Member Discount + Festival Offer, displaying the live calculated itemized receipt with exact paisa reconciliation.
+2. Click **🧪 1-Click Test "The Twist"**: Automatically loads messy sample data, cleans it, displays the audit report, and updates the active booking tiers.
+3. Click **🔄 Reset All**: Clears selections back to default show configuration.
 
-*(Alternatively, you can run them individually in separate terminals: `npm run dev:backend` and `npm run dev:frontend`)*
+---
 
-### 5. Export / Update AI Logs
-To refresh `AI_LOGS.md` with the latest authentic conversation logs:
-```bash
-npm run export:logs
+## Repository Structure
+
+```
+aurigait_round/
+├── README.md               # Setup, running, and testing guide (Required root file)
+├── REASONING.md            # Problem reasoning, assumptions, and architectural design (Required root file)
+├── AI_LOGS.md              # Complete authentic conversation logs with the AI assistant (Required root file)
+├── package.json            # Root workspace orchestrator
+├── sample_data/            # Sample test data for The Twist
+│   ├── messy_prices.csv    # Real-world dirty CSV (case duplicates, blanks, negatives)
+│   └── messy_prices.json   # Real-world dirty JSON equivalent
+├── scripts/
+│   ├── dev.js              # One-command fullstack launcher (`npm run dev`)
+│   ├── test_import.js      # CLI test runner for The Twist (`npm run test:import`)
+│   └── export_ai_logs.js   # Script to refresh AI_LOGS.md directly from system transcript
+├── backend/                # Core Pricing Engine & Express API
+│   ├── src/
+│   │   ├── types.ts          # Domain models, ShowConfig, BookingRequest, and Error classes
+│   │   ├── money.ts          # Exact integer paisa arithmetic, formatting, and ROUND_HALF_UP
+│   │   ├── pricingEngine.ts  # Core pricing pipeline and validation engine
+│   │   ├── tierImporter.ts   # The Twist: Sanitizer, deduplicator & audit report generator
+│   │   ├── billFormatter.ts  # Itemized line-by-line bill text formatter
+│   │   ├── server.ts         # Express REST API (/api/show, /api/quote, /api/book, /api/tiers/import)
+│   │   └── index.ts          # Module exports and CLI demo runner
+│   └── tests/
+│       ├── money.test.ts         # Unit tests for money conversion and rounding
+│       ├── pricingEngine.test.ts # Unit tests for business rules, discounts, and edge cases
+│       └── tierImporter.test.ts  # Unit tests for The Twist messy list import
+└── frontend/               # React + Vite Counter Interface
+    └── src/
+        ├── App.tsx          # Real-time interactive multiplex counter with 1-click test actions
+        ├── main.tsx
+        └── index.css        # Cinema counter styling
 ```
 
 ---
@@ -152,5 +150,5 @@ npm run export:logs
 ## Test Summary
 - **Test Runner**: Jest (`ts-jest`)
 - **Total Test Suites**: 3
-- **Total Tests**: 34 passed, 0 failed
+- **Total Tests**: 35 passed, 0 failed
 - **TypeScript Compilation**: Clean (`tsc` exits with code 0)

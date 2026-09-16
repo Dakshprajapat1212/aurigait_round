@@ -62,6 +62,43 @@ async function apiFetch(path: string, options?: RequestInit): Promise<Response> 
   throw lastErr || new Error('Failed to connect to backend server');
 }
 
+const SAMPLE_MESSY_CSV = `name,price,availableSeats
+Silver, ₹150, 50
+silver, 150, 50
+SILVER, ₹150.00, 50
+silver, 175, 50
+GOLD, 250, 30
+Gold, ₹250, 30
+GOLD, 300, 30
+Recliner, ₹400.50, 10
+recliner, 400.50, 10
+Balcony, 350.50 INR, 20
+Executive, "180,50", 15
+VIP,, 20
+, 200, 10
+Premium, -500, 5
+FreePass, 0, 10
+Club, abc, 15`;
+
+const SAMPLE_MESSY_JSON = `[
+  { "name": "Silver", "price": "₹150", "availableSeats": 50 },
+  { "name": "silver", "price": 150, "availableSeats": 50 },
+  { "name": "SILVER", "price": "₹150.00", "availableSeats": 50 },
+  { "name": "silver", "price": 175, "availableSeats": 50 },
+  { "name": "GOLD", "price": 250, "availableSeats": 30 },
+  { "name": "Gold", "price": "₹250", "availableSeats": 30 },
+  { "name": "GOLD", "price": 300, "availableSeats": 30 },
+  { "name": "Recliner", "price": "₹400.50", "availableSeats": 10 },
+  { "name": "recliner", "price": 400.50, "availableSeats": 10 },
+  { "name": "Balcony", "price": "350.50 INR", "availableSeats": 20 },
+  { "name": "Executive", "price": "180,50", "availableSeats": 15 },
+  { "name": "VIP", "price": "", "availableSeats": 20 },
+  { "name": "", "price": 200, "availableSeats": 10 },
+  { "name": "Premium", "price": -500, "availableSeats": 5 },
+  { "name": "FreePass", "price": 0, "availableSeats": 10 },
+  { "name": "Club", "price": "abc", "availableSeats": 15 }
+]`;
+
 export function App() {
   const [show, setShow] = useState<ShowConfig | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<Record<string, number>>({});
@@ -73,35 +110,27 @@ export function App() {
   const [loading, setLoading] = useState(true);
 
   const [showImporter, setShowImporter] = useState(false);
-  const [importText, setImportText] = useState(
-`Silver, ₹150.00, 50
-silver, 160, 50
-SILVER, 170, 50
-, 200, 10
-Gold, Rs. 250, 30
-GOLD, 260, 30
-VIP, , 20
-Box, -50, 10
-Club, 300 INR, 25`
-  );
+  const [importText, setImportText] = useState(SAMPLE_MESSY_CSV);
   const [importReport, setImportReport] = useState<any>(null);
   const [importing, setImporting] = useState(false);
 
-  const handleImportTiers = async () => {
+  const executeImport = async (textToImport: string) => {
     try {
       setImporting(true);
       setErrorMsg(null);
+      const isJson = textToImport.trim().startsWith('[');
+      const payload = isJson
+        ? { rawTiers: JSON.parse(textToImport), applyToShow: true }
+        : { csvText: textToImport, applyToShow: true };
+
       const res = await apiFetch('/tiers/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          csvText: importText,
-          applyToShow: true,
-        }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) {
-        setErrorMsg(data.error);
+        setErrorMsg(data.error || 'Failed to import');
       } else {
         setImportReport(data.importResult.report);
         setShow((prev) => (prev ? { ...prev, tiers: data.activeTiers } : null));
@@ -111,14 +140,50 @@ Club, 300 INR, 25`
         }
         setSelectedSeats(reset);
         setSuccessMsg(
-          `Price list cleaned & imported! (${data.importResult.report.importedCount} imported, ${data.importResult.report.deduplicatedCount} deduplicated, ${data.importResult.report.rejectedCount} rejected)`
+          `Price list cleaned & imported! (${data.importResult.report.importedCount} accepted, ${data.importResult.report.deduplicatedCount} de-duplicated, ${data.importResult.report.rejectedCount} rejected)`
         );
       }
-    } catch {
-      setErrorMsg('Failed to import price list');
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to import price list');
     } finally {
       setImporting(false);
     }
+  };
+
+  const handleImportTiers = () => executeImport(importText);
+
+  // 1-Click Tester Actions
+  const handleQuickTestBooking = () => {
+    if (!show) return;
+    const initial: Record<string, number> = {};
+    for (const key of Object.keys(show.tiers)) {
+      initial[key] = 0;
+    }
+    const keys = Object.keys(show.tiers);
+    if (keys.length > 0) initial[keys[0]] = 2; // e.g. 2 Silver
+    if (keys.length > 1) initial[keys[1]] = 1; // e.g. 1 Gold
+    setSelectedSeats(initial);
+    setIsMember(true);
+    setApplyFestivalDiscount(true);
+    setSuccessMsg('⚡ Quick Test Loaded: 2 Silver + 1 Gold tickets + Member Discount + Festival Offer');
+    setErrorMsg(null);
+  };
+
+  const handleQuickTestTheTwist = () => {
+    setShowImporter(true);
+    setImportText(SAMPLE_MESSY_CSV);
+    executeImport(SAMPLE_MESSY_CSV);
+  };
+
+  const handleResetAll = async () => {
+    await fetchShow();
+    setIsMember(false);
+    setApplyFestivalDiscount(false);
+    setInvoice(null);
+    setImportReport(null);
+    setShowImporter(false);
+    setSuccessMsg('Reset all selections to default show settings');
+    setErrorMsg(null);
   };
 
   // Fetch show details
@@ -276,6 +341,47 @@ Club, 300 INR, 25`
         </div>
       </header>
 
+      {/* ⚡ Tester Quick Actions Toolbar */}
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: 10,
+          padding: '12px 16px',
+          background: '#1e293b',
+          borderRadius: 8,
+          marginBottom: 20,
+          alignItems: 'center',
+          border: '1px solid #475569',
+        }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>⚡ Evaluator / Tester Quick Actions:</span>
+        <button
+          type="button"
+          className="btn-counter"
+          style={{ width: 'auto', padding: '6px 14px', fontSize: 13, background: '#0284c7', color: '#fff' }}
+          onClick={handleQuickTestBooking}
+        >
+          🎫 1-Click Test Booking (2 Silver + 1 Gold + Offers)
+        </button>
+        <button
+          type="button"
+          className="btn-counter"
+          style={{ width: 'auto', padding: '6px 14px', fontSize: 13, background: '#7c3aed', color: '#fff' }}
+          onClick={handleQuickTestTheTwist}
+        >
+          🧪 1-Click Test "The Twist" (Import Messy Prices)
+        </button>
+        <button
+          type="button"
+          className="btn-counter"
+          style={{ width: 'auto', padding: '6px 14px', fontSize: 13, background: '#334155', color: '#cbd5e1' }}
+          onClick={handleResetAll}
+        >
+          🔄 Reset All
+        </button>
+      </div>
+
       {errorMsg && <div className="alert alert-error">⚠️ {errorMsg}</div>}
       {successMsg && <div className="alert alert-success">✅ {successMsg}</div>}
 
@@ -289,6 +395,26 @@ Club, 300 INR, 25`
           <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
             Input raw, inconsistent tiers (with duplicate names in different cases, currency symbols, whitespace, blank values, and negative prices). The engine will clean it into a valid price list and provide a full audit report.
           </p>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+            <span style={{ fontSize: 12, color: '#94a3b8', alignSelf: 'center' }}>Presets:</span>
+            <button
+              type="button"
+              className="btn-counter"
+              style={{ width: 'auto', padding: '4px 10px', fontSize: 12, background: '#334155', color: '#f8fafc' }}
+              onClick={() => setImportText(SAMPLE_MESSY_CSV)}
+            >
+              📄 Load Sample CSV
+            </button>
+            <button
+              type="button"
+              className="btn-counter"
+              style={{ width: 'auto', padding: '4px 10px', fontSize: 12, background: '#334155', color: '#f8fafc' }}
+              onClick={() => setImportText(SAMPLE_MESSY_JSON)}
+            >
+              📋 Load Sample JSON
+            </button>
+          </div>
 
           <textarea
             rows={6}

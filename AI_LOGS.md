@@ -4372,3 +4372,120 @@ give me a test a  import file for testing
 
 ---
 
+### ASSISTANT (Turn 23) [2026-09-16T10:45:34Z]
+
+Here are the sample test files created specifically to test **"The Twist" (Messy Seat-Class Price List Importer & Cleaner)**.
+
+Both files are located in the repository under the [`sample_data/`](file:///Users/daksh/Downloads/auriga_it/aurigait_round/sample_data) directory and committed to GitHub:
+- [**`sample_data/messy_prices.csv`**](file:///Users/daksh/Downloads/auriga_it/aurigait_round/sample_data/messy_prices.csv)
+- [**`sample_data/messy_prices.json`**](file:///Users/daksh/Downloads/auriga_it/aurigait_round/sample_data/messy_prices.json)
+
+---
+
+### 1. CSV Test Content ([`sample_data/messy_prices.csv`](file:///Users/daksh/Downloads/auriga_it/aurigait_round/sample_data/messy_prices.csv))
+
+You can copy-paste this directly into the UI importer or upload/use the file:
+
+```csv
+name,price,availableSeats
+Silver, ₹150, 50
+silver, 150, 50
+SILVER, ₹150.00, 50
+silver, 175, 50
+GOLD, 250, 30
+Gold, ₹250, 30
+GOLD, 300, 30
+Recliner, ₹400.50, 10
+recliner, 400.50, 10
+Balcony, 350.50 INR, 20
+Executive, "180,50", 15
+VIP,, 20
+, 200, 10
+Premium, -500, 5
+FreePass, 0, 10
+Club, abc, 15
+```
+
+---
+
+### 2. JSON Test Content ([`sample_data/messy_prices.json`](file:///Users/daksh/Downloads/auriga_it/aurigait_round/sample_data/messy_prices.json))
+
+```json
+[
+  { "name": "Silver", "price": "₹150", "availableSeats": 50 },
+  { "name": "silver", "price": 150, "availableSeats": 50 },
+  { "name": "SILVER", "price": "₹150.00", "availableSeats": 50 },
+  { "name": "silver", "price": 175, "availableSeats": 50 },
+  { "name": "GOLD", "price": 250, "availableSeats": 30 },
+  { "name": "Gold", "price": "₹250", "availableSeats": 30 },
+  { "name": "GOLD", "price": 300, "availableSeats": 30 },
+  { "name": "Recliner", "price": "₹400.50", "availableSeats": 10 },
+  { "name": "recliner", "price": 400.50, "availableSeats": 10 },
+  { "name": "Balcony", "price": "350.50 INR", "availableSeats": 20 },
+  { "name": "Executive", "price": "180,50", "availableSeats": 15 },
+  { "name": "VIP", "price": "", "availableSeats": 20 },
+  { "name": "", "price": 200, "availableSeats": 10 },
+  { "name": "Premium", "price": -500, "availableSeats": 5 },
+  { "name": "FreePass", "price": 0, "availableSeats": 10 },
+  { "name": "Club", "price": "abc", "availableSeats": 15 }
+]
+```
+
+---
+
+### What Each Record Tests:
+
+| Category | Input Record | Behavior & System Audit Result |
+| :--- | :--- | :--- |
+| **Accepted** | `Silver, ₹150` | Accepted as base `Silver` @ ₹150.00 |
+| **Duplicate (Ignored)** | `silver, 150` | De-duplicated (matching price ₹150.00) |
+| **Duplicate (Ignored)** | `SILVER, ₹150.00` | De-duplicated (matching price ₹150.00) |
+| **Conflicting Duplicate** | `silver, 175` | 🔴 **Rejected** (price mismatch: existing is ₹150.00, incoming is ₹175.00) |
+| **Accepted** | `GOLD, 250` | Accepted as base `GOLD` @ ₹250.00 |
+| **Duplicate (Ignored)** | `Gold, ₹250` | De-duplicated (matching price ₹250.00) |
+| **Conflicting Duplicate** | `GOLD, 300` | 🔴 **Rejected** (price mismatch: existing is ₹250.00, incoming is ₹300.00) |
+| **Accepted Decimal** | `Recliner, ₹400.50` | Accepted @ ₹400.50 |
+| **Duplicate Decimal** | `recliner, 400.50` | De-duplicated (matching price ₹400.50) |
+| **Currency Suffix** | `Balcony, 350.50 INR` | Accepted @ ₹350.50 |
+| **European Comma Decimal**| `Executive, "180,50"` | Accepted @ ₹180.50 |
+| **Blank Price** | `VIP,, 20` | 🔴 **Rejected** (Blank or missing price) |
+| **Blank Tier Name** | `, 200, 10` | 🔴 **Rejected** (Blank or missing tier name) |
+| **Negative Price** | `Premium, -500` | 🔴 **Rejected** (Price cannot be negative) |
+| **Zero Price** | `FreePass, 0` | 🔴 **Rejected** (Price must be strictly positive > 0) |
+| **Unparseable Price** | `Club, abc` | 🔴 **Rejected** (Invalid price format: 'abc') |
+
+---
+
+### How to Run the Tests:
+
+#### Option 1: One-Click CLI Test Runner
+Run in terminal:
+```bash
+npm run test:import
+```
+This runs [`scripts/test_import.js`](file:///Users/daksh/Downloads/auriga_it/aurigait_round/scripts/test_import.js), feeds [`sample_data/messy_prices.csv`](file:///Users/daksh/Downloads/auriga_it/aurigait_round/sample_data/messy_prices.csv), and outputs the formatted color-coded audit report.
+
+#### Option 2: In the React Web App
+1. Open **`http://localhost:3000`** in your browser.
+2. Scroll to the **"The Twist: Import Messy Price List"** section.
+3. Paste either the CSV or JSON content above into the textarea.
+4. Click **"Run Import & Cleanse"** or **"Import & Set as Active Pricing"**.
+5. The UI will instantly display:
+   - Green badge: **Accepted Unique Tiers**
+   - Yellow badge: **De-duplicated Records** (with original vs resolved match)
+   - Red badge: **Rejected Records** (with precise rejection reasons)
+
+#### Option 3: Automated Jest Suite
+```bash
+npm test
+```
+Runs all 35 unit tests including complete coverage for `TierImporter`.
+
+---
+
+### USER (Turn 24) [2026-09-16T10:45:58Z]
+
+make  the project that much easy to run so kike idk why u were doing curl agan abut make it usedr forall tester so they are easy to abel to check it and test and dont make it like we implemtn tunnnesscary tjings just real
+
+---
+
