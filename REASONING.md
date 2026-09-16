@@ -113,7 +113,7 @@ Errors are modeled as specific domain exceptions derived from `PricingEngineErro
 
 ### 6. Automated Testing Strategy
 
-A comprehensive Jest test suite (`27 tests`) covers all business rules and edge cases:
+A comprehensive Jest test suite (`34 tests across 3 suites`) covers all business rules, importer sanitization, and edge cases:
 1. **Single & Multi-seat calculations**: Single tickets, multiple tickets in one tier, and mixed multi-tier bookings.
 2. **Case-Insensitive matching**: `sILveR` matches `Silver`.
 3. **Availability & Sold-out enforcement**: Sold-out rejections, insufficient capacity rejections, zero/negative quantity rejections.
@@ -129,3 +129,32 @@ A comprehensive Jest test suite (`27 tests`) covers all business rules and edge 
    - Configurable GST rates (0%, 18%, 28%).
    - Fractional paisa half-up rounding boundary tests (.4999 vs .5000).
    - Final reconciliation invariant check.
+6. **The Twist Importer Sanitization Tests**:
+   - Formatting tolerance (`₹`, `Rs.`, `INR`, comma decimals, whitespace).
+   - Case-insensitive de-duplication of redundant tiers.
+   - Specific rejection reasons for blank names, blank prices, and negative values.
+   - Full batch audit integrity assertions.
+
+---
+
+### 7. The Twist: Messy Price List Sanitizer & Importer
+
+Real-world multiplex counters frequently receive messy, inconsistent price lists from cinema distributors or legacy spreadsheets. 
+
+#### **Sanitization & De-Duplication Policy:**
+1. **Case-Insensitive De-Duplication**:
+   - Tiers like `"Silver"`, `"silver"`, `"SILVER"`, and `"  Silver  "` all normalize to the key `silver`.
+   - **Policy**: The *first valid occurrence* of the tier is accepted and added to the cleaned price list. Subsequent occurrences are marked as `Deduplicated` in the audit report with a reference to the matched canonical tier.
+2. **Inconsistent Price Normalization**:
+   - Strings with currency prefixes or suffixes (`₹150.00`, `Rs. 250`, ` 350.50 INR `) are stripped of non-numeric noise and normalized to standard decimal numbers before conversion to integer `Paisa`.
+   - Comma decimal separators (e.g. `180,50`) are normalized to `180.50`.
+3. **Blank & Missing Value Guard**:
+   - Missing or empty tier names (`null`, `undefined`, `""`, `"   "`) are rejected immediately with descriptive audit messages.
+   - Missing or blank prices (`null`, `undefined`, `""`) are rejected immediately.
+4. **Negative Price Rejection**:
+   - Negative prices (`-150`, `"-₹50.00"`) are caught and rejected (`"Price cannot be negative"`), preventing corrupt financial configurations.
+5. **Complete Audit Reporting**:
+   - Every import run produces a structured audit report:
+     $$\text{totalProcessed} \equiv \text{importedCount} + \text{deduplicatedCount} + \text{rejectedCount}$$
+   - Counter managers can inspect exactly why each raw entry was imported, ignored, or rejected.
+

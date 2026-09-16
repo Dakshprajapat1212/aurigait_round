@@ -2,7 +2,8 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { PricingEngine } from './pricingEngine';
 import { BillFormatter } from './billFormatter';
-import { OffersConfig, ShowConfig } from './types';
+import { TierImporter } from './tierImporter';
+import { OffersConfig, RawTierInput, ShowConfig } from './types';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -102,6 +103,46 @@ app.post('/api/book', (req: Request, res: Response) => {
     return res.status(400).json({
       error: error.message || 'Booking confirmation failed',
       name: error.name || 'PricingEngineError',
+    });
+  }
+});
+/**
+ * POST /api/tiers/import
+ * Imports a messy seat-class price list, sanitizes it, and returns an audit report.
+ * Optionally updates the show's active tiers if `applyToShow: true`.
+ */
+app.post('/api/tiers/import', (req: Request, res: Response) => {
+  try {
+    let rawTiers: RawTierInput[] = [];
+
+    if (req.body.csvText) {
+      rawTiers = TierImporter.parseCSVToRawTiers(req.body.csvText);
+    } else if (Array.isArray(req.body.rawTiers)) {
+      rawTiers = req.body.rawTiers;
+    } else {
+      return res.status(400).json({
+        error: 'Expected either `rawTiers` array or `csvText` string in request body.',
+      });
+    }
+
+    const importResult = TierImporter.importMessyTiers(rawTiers);
+
+    // If requested, apply the cleaned tiers to the active show configuration
+    if (req.body.applyToShow) {
+      defaultShowConfig.tiers = {
+        ...defaultShowConfig.tiers,
+        ...importResult.cleanedTiers,
+      };
+    }
+
+    return res.json({
+      success: true,
+      importResult,
+      activeTiers: defaultShowConfig.tiers,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error.message || 'Tier import failed',
     });
   }
 });

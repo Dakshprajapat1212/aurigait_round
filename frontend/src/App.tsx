@@ -72,6 +72,55 @@ export function App() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [showImporter, setShowImporter] = useState(false);
+  const [importText, setImportText] = useState(
+`Silver, ₹150.00, 50
+silver, 160, 50
+SILVER, 170, 50
+, 200, 10
+Gold, Rs. 250, 30
+GOLD, 260, 30
+VIP, , 20
+Box, -50, 10
+Club, 300 INR, 25`
+  );
+  const [importReport, setImportReport] = useState<any>(null);
+  const [importing, setImporting] = useState(false);
+
+  const handleImportTiers = async () => {
+    try {
+      setImporting(true);
+      setErrorMsg(null);
+      const res = await apiFetch('/tiers/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          csvText: importText,
+          applyToShow: true,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error);
+      } else {
+        setImportReport(data.importResult.report);
+        setShow((prev) => (prev ? { ...prev, tiers: data.activeTiers } : null));
+        const reset: Record<string, number> = {};
+        for (const key of Object.keys(data.activeTiers)) {
+          reset[key] = 0;
+        }
+        setSelectedSeats(reset);
+        setSuccessMsg(
+          `Price list cleaned & imported! (${data.importResult.report.importedCount} imported, ${data.importResult.report.deduplicatedCount} deduplicated, ${data.importResult.report.rejectedCount} rejected)`
+        );
+      }
+    } catch {
+      setErrorMsg('Failed to import price list');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   // Fetch show details
   const fetchShow = async () => {
     try {
@@ -214,11 +263,113 @@ export function App() {
             Show: <strong style={{ color: '#f8fafc' }}>{show?.showName}</strong> (ID: {show?.showId})
           </p>
         </div>
-        <span className="counter-badge">Pricing Engine v1.0</span>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+          <button
+            type="button"
+            className="btn-counter"
+            style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
+            onClick={() => setShowImporter(!showImporter)}
+          >
+            {showImporter ? '✕ Close Importer' : '📥 The Twist: Import Messy Price List'}
+          </button>
+          <span className="counter-badge">Pricing Engine v1.0</span>
+        </div>
       </header>
 
       {errorMsg && <div className="alert alert-error">⚠️ {errorMsg}</div>}
       {successMsg && <div className="alert alert-success">✅ {successMsg}</div>}
+
+      {/* The Twist: Messy Price List Sanitizer Panel */}
+      {showImporter && (
+        <div className="panel" style={{ marginBottom: 24, borderColor: '#3b82f6' }}>
+          <div className="panel-title">
+            <span>📥 The Twist: Messy Seat-Class Price List Importer</span>
+            <span style={{ fontSize: 12, color: '#38bdf8' }}>De-duplicates, Cleans Formats & Audits</span>
+          </div>
+          <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
+            Input raw, inconsistent tiers (with duplicate names in different cases, currency symbols, whitespace, blank values, and negative prices). The engine will clean it into a valid price list and provide a full audit report.
+          </p>
+
+          <textarea
+            rows={6}
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            style={{
+              width: '100%',
+              backgroundColor: '#090d16',
+              border: '1px solid #334155',
+              borderRadius: 8,
+              padding: 12,
+              color: '#f8fafc',
+              fontFamily: 'monospace',
+              fontSize: 13,
+              marginBottom: 12,
+            }}
+          />
+
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button
+              type="button"
+              className="btn-book"
+              style={{ width: 'auto', padding: '10px 20px', marginTop: 0 }}
+              disabled={importing}
+              onClick={handleImportTiers}
+            >
+              {importing ? 'Processing...' : 'Clean & Import Price List'}
+            </button>
+          </div>
+
+          {importReport && (
+            <div style={{ marginTop: 18, borderTop: '1px solid #334155', paddingTop: 16 }}>
+              <h3 style={{ fontSize: 15, marginBottom: 10, color: '#e2e8f0' }}>
+                📋 Import Audit Report (Processed: {importReport.totalProcessed})
+              </h3>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                <span style={{ color: '#10b981', fontWeight: 600 }}>🟢 Imported: {importReport.importedCount}</span>
+                <span style={{ color: '#f59e0b', fontWeight: 600 }}>🟡 De-duplicated: {importReport.deduplicatedCount}</span>
+                <span style={{ color: '#ef4444', fontWeight: 600 }}>🔴 Rejected: {importReport.rejectedCount}</span>
+              </div>
+
+              {importReport.imported.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <strong style={{ color: '#10b981', fontSize: 13 }}>Cleaned & Imported Tiers:</strong>
+                  <ul style={{ fontSize: 13, marginLeft: 20, color: '#cbd5e1', marginTop: 4 }}>
+                    {importReport.imported.map((t: any, idx: number) => (
+                      <li key={idx}>
+                        <strong>{t.name}</strong>: {t.priceFormatted} ({t.availableSeats} seats)
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {importReport.deduplicated.length > 0 && (
+                <div style={{ marginBottom: 12 }}>
+                  <strong style={{ color: '#f59e0b', fontSize: 13 }}>De-duplicated Tiers (Ignored redundant entries):</strong>
+                  <ul style={{ fontSize: 13, marginLeft: 20, color: '#94a3b8', marginTop: 4 }}>
+                    {importReport.deduplicated.map((d: any, idx: number) => (
+                      <li key={idx}>{d.reason}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {importReport.rejected.length > 0 && (
+                <div>
+                  <strong style={{ color: '#ef4444', fontSize: 13 }}>Rejected Entries:</strong>
+                  <ul style={{ fontSize: 13, marginLeft: 20, color: '#fca5a5', marginTop: 4 }}>
+                    {importReport.rejected.map((r: any, idx: number) => (
+                      <li key={idx}>
+                        {JSON.stringify(r.raw)} &rarr; <em>{r.reason}</em>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid-layout">
         {/* Left Column: Seat Selection & Offers */}

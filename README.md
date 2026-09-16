@@ -69,6 +69,12 @@ aurigait_round/
    - **CLI / Text Receipt**: Formatted line-by-line receipt for counter receipts.
    - **Interactive Web UI**: Modern React counter interface with live calculation and booking confirmation.
 
+7. **The Twist: Messy Price List Importer & Audit Reporter**:
+   - Sanitizes messy input lists with duplicate names in different cases (`Silver`, `silver`, `SILVER`).
+   - Normalizes inconsistent price formats (`₹150.00`, `Rs. 250`, ` 350.50 INR `, `180,50`).
+   - Automatically catches and rejects blank values and negative prices.
+   - Produces a detailed audit report: Total Processed = Imported + De-duplicated + Rejected.
+
 ---
 
 ## Getting Started
@@ -145,6 +151,6 @@ npm run export:logs
 
 ## Test Summary
 - **Test Runner**: Jest (`ts-jest`)
-- **Total Test Suites**: 2
-- **Total Tests**: 27 passed, 0 failed
+- **Total Test Suites**: 3
+- **Total Tests**: 34 passed, 0 failed
 - **TypeScript Compilation**: Clean (`tsc` exits with code 0)

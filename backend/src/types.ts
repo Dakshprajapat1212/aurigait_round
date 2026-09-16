@@ -160,3 +160,57 @@ export class InsufficientSeatsError extends PricingEngineError {
     this.name = 'InsufficientSeatsError';
   }
 }
+
+/**
+ * Raw input record for messy price list import.
+ */
+export interface RawTierInput {
+  name?: any;
+  price?: any;
+  availableSeats?: any;
+}
+
+/**
+ * Successfully imported and cleaned tier.
+ */
+export interface ImportedTier {
+  normalizedKey: string;
+  name: string;
+  pricePaisa: Paisa;
+  priceFormatted: string;
+  availableSeats: number;
+}
+
+/**
+ * Deduplicated tier record.
+ */
+export interface DeduplicatedTier {
+  raw: RawTierInput;
+  normalizedKey: string;
+  matchedWith: string; // The canonical name of the already imported tier
+  reason: string;
+}
+
+/**
+ * Rejected tier record with explanation.
+ */
+export interface RejectedTier {
+  raw: RawTierInput;
+  reason: string;
+}
+
+/**
+ * Complete Audit Report returned by TierImporter.
+ */
+export interface TierImportResult {
+  cleanedTiers: Record<string, SeatTierConfig>;
+  report: {
+    totalProcessed: number;
+    importedCount: number;
+    deduplicatedCount: number;
+    rejectedCount: number;
+    imported: ImportedTier[];
+    deduplicated: DeduplicatedTier[];
+    rejected: RejectedTier[];
+  };
+}
