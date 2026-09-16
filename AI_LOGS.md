@@ -2924,3 +2924,154 @@ its just a simple caluclatoee ??? then what problesm i solve does what was the p
 
 ---
 
+### ASSISTANT (Turn 15) [2026-09-16T10:21:28Z]
+
+### Why This Is NOT Just a "Simple Calculator"
+
+If this were just `a + b - c`, anyone could write 5 lines of code:
+```javascript
+// ❌ Naive Calculator Approach:
+const total = (tickets * price) - discount + fee + tax;
+```
+
+**Why was the multiplex queue getting angry in the first place?**
+Because a naive calculation breaks down in the real world in subtle, expensive ways:
+
+---
+
+### **1. The 6 Real Engineering Problems We Solved**
+
+#### **Problem 1: Floating-Point Money Bugs (The Paisa Mismatch)**
+- In standard JavaScript or Python, numbers are floating-point floats:
+  ```javascript
+  0.1 + 0.2 === 0.30000000000000004 // true in JS!
+  ```
+- If a customer buys a ticket at ₹155.25 with 18% GST:
+  ```javascript
+  155.25 * 0.18 = 27.945000000000004
+  ```
+- If you use `Math.round()` or `toFixed()`, floating-point drift can result in an off-by-one paisa discrepancy.
+- When thousands of customers book tickets daily, **the accounts don't reconcile with the tax auditor** because the line items sum to ₹796.49 while the final charge is ₹796.50.
+- **What We Solved**: We built an exact **integer `Paisa` representation** (`₹1.00 = 100 paisa`) paired with a mathematical **`ROUND_HALF_UP`** algorithm. Calculations have zero floating-point errors and reconcile to the exact paisa.
+
+---
+
+#### **Problem 2: Discount Stacking Order & The "Free Ticket" Exploit**
+- What happens when a customer applies **both** a Flat Festival Discount and a Member Percentage Discount?
+  - If you calculate Member 10% on the original ₹700, the member discount is **₹70**.
+  - But if the festival discount already reduced the bill by ₹50, the remaining balance is ₹650. The member discount should be **₹65**!
+- What if a customer has a ₹200 festival discount on a ₹150 ticket?
+  - A naive calculator gives `150 - 200 = -50`, meaning the cinema owes the customer ₹50!
+- **What We Solved**: We designed a deterministic **discount pipeline**:
+  1. Base Subtotal $\rightarrow$ Apply Festival Discount (capped at base subtotal so balance never becomes negative).
+  2. Member % Discount applied strictly on the *remaining* subtotal.
+  3. Enforced the Member Discount Cap limit.
+
+---
+
+#### **Problem 3: The Tax Base & Discount Scope Trap**
+- Do discounts reduce convenience fees and taxes?
+- If a VIP member gets a 100% discount on movie tickets, **do they still have to pay the convenience fee and the GST on that fee?**
+- In retail compliance, convenience fees and taxes are non-discountable service charges.
+- **What We Solved**: We explicitly decoupled discountable ticket charges from non-discountable service fees, ensuring the taxable base correctly reconciles:
+  $$\text{Taxable Base} = \text{Net Ticket Subtotal} + \text{Total Convenience Fee}$$
+
+---
+
+#### **Problem 4: Overbooking & Availability Race Conditions**
+- The prompt explicitly noted:
+  > *"by showtime some tiers sell out and shouldn’t be bookable"*
+- If there are only 5 Recliner seats left, and an agent tries to book 6, a naive calculator happily computes the price and sells phantom seats that physically do not exist in the theater.
+- **What We Solved**: We built **pre-flight availability guards**:
+  - `SoldOutTierError` if available capacity is 0.
+  - `InsufficientSeatsError` if requested quantity > available seats.
+  - Statefully decrements seat inventory upon booking confirmation.
+
+---
+
+#### **Problem 5: Auditability & Line-by-Line Transparency**
+- The prompt states:
+  > *"Customers keep demanding a clear line-by-line breakup of the bill."*
+- When customers see a lump sum like `₹796.50`, they demand to see:
+  - How much was each tier?
+  - How much was the festival discount vs member discount?
+  - What was the convenience fee per ticket?
+  - What exact percentage was GST charged on?
+- **What We Solved**: We generate a complete, immutable **`Invoice` object** and formatted text receipt where every single paisa is accounted for and mathematically asserted:
+  $$\text{finalTotal} \equiv \text{netTickets} + \text{convenienceFee} + \text{gstAmount}$$
+
+---
+
+#### **Problem 6: Generic Multi-Cinema Engine (Not Hardcoded)**
+- Prompt:
+  > *"build it for any cinema counter, not one show."*
+- Our engine is not hardcoded to one movie or one fixed 18% tax rate. It accepts any `ShowConfig` with custom tiers (Silver, Gold, Platinum, VIP), variable seat inventories, and custom tax rates (0%, 5%, 18%, 28%).
+
+---
+
+### **Summary of What Makes It Engineering-Grade**
+
+| Aspect | Naive Calculator | Our Pricing Engine |
+|---|---|---|
+| **Precision** | Float math (`0.1 + 0.2 != 0.3`) | Integer Paisa + `ROUND_HALF_UP` |
+| **Availability** | Blind calculation | Strict capacity guard (`SoldOutTierError`) |
+| **Discounts** | Uncontrolled order / negative totals | Sequential pipeline + floor + cap limits |
+| **Tax Base** | Blurs fees and tickets | Precise Taxable Base separation |
+| **Auditability** | Just a total number | Full line-by-line itemized invoice |
+| **Testing** | Manual trial | 27 automated unit tests covering all edge cases |
+
+That is the difference between a school homework script and an **auditable financial engine a cinema counter can actually trust**.
+
+---
+
+### USER (Turn 16) [2026-09-16T10:23:50Z]
+
+now u have testing u have to check ur completed project each and evthing complete fronted  and backend eacj and evrthing  and we have to test complete one by evething is working and our proejct is working so much finallly  lets start
+
+---
+
+### USER (Turn 17) [2026-09-16T10:27:30Z]
+
+now u have testing u have to check ur completed project each and evthing complete fronted  and backend eacj and evrthing  and we have to test complete one by evething is working and our proejct is working so much finallly  lets start    You must ensure that you are sitting at the same spot where you sat in Round-1, today morning.
+Round 2 is a hands-on "Builder" round that assesses how candidates approach an open-ended, real-world problem.
+- Duration: The round is 2.5 hours long. Submissions will not be accepted after the 2.5-hour window closes.
+- Problem statement: Each candidate will be given a short, real-world problem statement. No further explanation or specification will be provided beyond that statement.
+- Deriving the solution: Candidates are expected to interpret the problem themselves and determine the features and specifications to be implemented. They are free to use any AI assistance or tools (for example, GitHub Copilot) to help infer the requirements and build their solution.
+- Tech stack: Candidates may use any technology stack they are comfortable with.
+- Environment: All coding is to be done online using [GitHub Codespaces](https://github.com/features/codespaces), accessed via the candidate's college email ID.
+Problem Assignment:
+[ticket_pricing](https://docs.google.com/document/d/1zY1bGgBdT-4dEw8PK2iZBlDMphTowsLo/edit?usp=sharing&ouid=113305145576875992418&rtpof=true&sd=true)
+Submission Guidelines
+The final solution must be a public GitHub repository, and its root folder must contain the following three files, which are required for evaluation:
+- README.md — instructions for project setup, running, and debugging.
+- REASONING.md — an explanation of the thought process behind the solution.
+- AI_LOGS.md — a complete copy of the candidate's conversation with the AI tool (Copilot or any other). This log must be pasted as-is and not modified in any way; any alteration will lead to a deduction of marks.
+Candidates must submit the public GitHub repository URL through the following form: [https://forms.gle/eEJNPdbrtr7Stu497](https://forms.gle/eEJNPdbrtr7Stu497)
+Please note that the 2.5-hour limit is strict — any submission received after the window closes will not be entertained. and in ai log dont metion that i ask u to win this , u just have ton making ai log about testing and do  check each and evthing that we win this and yewahh dont metnion this that im taling abotu win dont metion in ai loog make, keeep ai kog we are just enginer ,, now  we will do completefe testing frontend and backend does it reallly solving our proeject ,  then we will make our prject more chnages like we gonna make sure that we keep our project simple so when we uplod in githubb  so thwe tester dont fee andyhting stressfrll they just do nom run dev nom run dev and thye can acces our  [roject easily , so the just remove head  part , not even anay poosible mmsitae and heaache tey shouldnt have , now ficus on tetsing here and also metion that in ai log lets stat
+
+---
+
+### USER (Turn 18) [2026-09-16T10:28:14Z]
+
+now u have testing u have to check ur completed project each and evthing complete fronted  and backend eacj and evrthing  and we have to test complete one by evething is working and our proejct is working so much finallly  lets start    You must ensure that you are sitting at the same spot where you sat in Round-1, today morning.
+Round 2 is a hands-on "Builder" round that assesses how candidates approach an open-ended, real-world problem.
+- Duration: The round is 2.5 hours long. Submissions will not be accepted after the 2.5-hour window closes.
+- Problem statement: Each candidate will be given a short, real-world problem statement. No further explanation or specification will be provided beyond that statement.
+- Deriving the solution: Candidates are expected to interpret the problem themselves and determine the features and specifications to be implemented. They are free to use any AI assistance or tools (for example, GitHub Copilot) to help infer the requirements and build their solution.
+- Tech stack: Candidates may use any technology stack they are comfortable with.
+- Environment: All coding is to be done online using [GitHub Codespaces](https://github.com/features/codespaces), accessed via the candidate's college email ID.
+Problem Assignment:
+[ticket_pricing](https://docs.google.com/document/d/1zY1bGgBdT-4dEw8PK2iZBlDMphTowsLo/edit?usp=sharing&ouid=113305145576875992418&rtpof=true&sd=true)
+Submission Guidelines
+The final solution must be a public GitHub repository, and its root folder must contain the following three files, which are required for evaluation:
+- README.md — instructions for project setup, running, and debugging.
+- REASONING.md — an explanation of the thought process behind the solution.
+- AI_LOGS.md — a complete copy of the candidate's conversation with the AI tool (Copilot or any other). This log must be pasted as-is and not modified in any way; any alteration will lead to a deduction of marks.
+Candidates must submit the public GitHub repository URL through the following form: [https://forms.gle/eEJNPdbrtr7Stu497](https://forms.gle/eEJNPdbrtr7Stu497)
+Please note that the 2.5-hour limit is strict — any submission received after the window closes will not be entertained. and in ai log dont metion that i ask u to win this , u just have ton making ai log about testing and do  check each and evthing that we win this and yewahh dont metnion this that im taling abotu win dont metion in ai loog make, keeep ai kog we are just enginer ,, now  we will do completefe testing frontend and backend does it reallly solving our proeject ,  then we will make our prject more chnages like we gonna make sure that we keep our project simple so when we uplod in githubb  so thwe tester dont fee andyhting stressfrll they just do nom run dev nom run dev and thye can acces our  [roject easily , so the just remove head  part , not even anay poosible mmsitae and heaache tey shouldnt have , now ficus on tetsing here and also metion that in ai log lets stat Friday night at the multiplex
+The multiplex booking counter keeps mis-pricing tickets and the queue is getting angry. Seats come in tiers — Silver, Gold, Recliner — at different prices, and by showtime some tiers sell out and shouldn’t be bookable. There are offers on: a flat festival discount and a percentage off for members (capped). Every booking then adds a small per-ticket convenience fee and GST on top, and it all has to total to the exact paisa. Customers keep demanding a clear line-by-line breakup of the bill.
+Build a pricing engine the counter can trust.
+(The messy real-world money rules are the point — handle each correctly, and build it for any cinema counter, not one show. Get a plain booking total right first, then layer on the offers, the fee and the tax.)
+
+---
+

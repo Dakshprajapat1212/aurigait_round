@@ -126,17 +126,14 @@ Output:
 npm run build
 ```
 
-### 4. Run the Fullstack Application
-In Terminal 1 (Start Backend API on port 4000):
+### 4. Run the Fullstack Application (One Command)
+To launch both the Backend API (port 4000) and the React Counter UI (port 3000) concurrently with a single command:
 ```bash
-npm run dev:backend
+npm run dev
 ```
+Open **`http://localhost:3000`** in your browser to interact with the live cinema counter interface.
 
-In Terminal 2 (Start React Counter UI on port 3000):
-```bash
-npm run dev:frontend
-```
-Open `http://localhost:3000` in your browser to interact with the counter UI.
+*(Alternatively, you can run them individually in separate terminals: `npm run dev:backend` and `npm run dev:frontend`)*
 
 ### 5. Export / Update AI Logs
 To refresh `AI_LOGS.md` with the latest authentic conversation logs:
