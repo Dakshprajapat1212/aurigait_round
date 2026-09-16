@@ -436,3 +436,9 @@ The implementation prioritizes:
 - **Explainable Pricing**: Every intermediate discount, fee, and tax is transparent in the line-by-line receipt.
 - **Testability**: Pure domain functions without hidden I/O dependencies.
 - **Simple Architecture**: Zero external database or complex microservice dependencies for lightweight, instant evaluation.
+
+demo->
+
+<img width="1470" height="956" alt="Screenshot 2026-09-16 at 4 45 30 PM" src="https://github.com/user-attachments/assets/be06c0f0-df07-4666-8a0b-568e2e018386" />
+<img width="1470" height="956" alt="Screenshot 2026-09-16 at 4 45 43 PM" src="https://github.com/user-attachments/assets/a1873c9e-09c5-4d79-8d88-ef8da4feeb22" />
+
