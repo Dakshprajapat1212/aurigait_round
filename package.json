@@ -1,0 +1,34 @@
+{
+  "name": "aurigait_round",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm --prefix backend test",
+    "build": "npm --prefix backend run build && npm --prefix frontend run build",
+    "start": "npm --prefix backend start",
+    "dev:backend": "npm --prefix backend start",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "demo": "npm --prefix backend run demo",
+    "export:logs": "node scripts/export_ai_logs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dakshprajapat1212/aurigait_round.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Dakshprajapat1212/aurigait_round/issues"
+  },
+  "homepage": "https://github.com/Dakshprajapat1212/aurigait_round#readme",
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^22.20.3",
+    "jest": "^30.5.1",
+    "ts-jest": "^29.4.12",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

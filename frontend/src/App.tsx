@@ -1,0 +1,370 @@
+import React, { useState, useEffect } from 'react';
+
+interface SeatTier {
+  name: string;
+  pricePaisa: number;
+  availableSeats: number;
+}
+
+interface ShowConfig {
+  showId: string;
+  showName: string;
+  tiers: Record<string, SeatTier>;
+  convenienceFeePerTicketPaisa: number;
+  gstRatePercent: number;
+}
+
+interface Invoice {
+  showId: string;
+  showName: string;
+  totalTickets: number;
+  baseTicketSubtotalFormatted: string;
+  discounts: {
+    festivalDiscountPaisa: number;
+    festivalDiscountFormatted: string;
+    memberDiscountPaisa: number;
+    memberDiscountFormatted: string;
+    totalDiscountPaisa: number;
+    totalDiscountFormatted: string;
+  };
+  netTicketSubtotalFormatted: string;
+  convenienceFeePerTicketPaisa: number;
+  totalConvenienceFeeFormatted: string;
+  taxableAmountPaisa: number;
+  gstRatePercent: number;
+  gstAmountFormatted: string;
+  finalTotalFormatted: string;
+  seatLineItems: Array<{
+    tierName: string;
+    quantity: number;
+    unitPriceFormatted: string;
+    lineTotalFormatted: string;
+  }>;
+}
+
+export function App() {
+  const [show, setShow] = useState<ShowConfig | null>(null);
+  const [selectedSeats, setSelectedSeats] = useState<Record<string, number>>({});
+  const [isMember, setIsMember] = useState(false);
+  const [applyFestivalDiscount, setApplyFestivalDiscount] = useState(false);
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch show details
+  const fetchShow = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch('/api/show');
+      const data = await res.json();
+      setShow(data.show);
+      // Initialize quantities to 0
+      const initial: Record<string, number> = {};
+      for (const key of Object.keys(data.show.tiers)) {
+        initial[key] = 0;
+      }
+      setSelectedSeats(initial);
+      setErrorMsg(null);
+    } catch (err: any) {
+      setErrorMsg('Failed to connect to backend server. Ensure backend is running on port 4000.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchShow();
+  }, []);
+
+  // Update quote calculation whenever selections change
+  useEffect(() => {
+    if (!show) return;
+
+    const items = Object.keys(selectedSeats)
+      .filter((key) => selectedSeats[key] > 0)
+      .map((key) => ({
+        tierName: show.tiers[key].name,
+        quantity: selectedSeats[key],
+      }));
+
+    if (items.length === 0) {
+      setInvoice(null);
+      setErrorMsg(null);
+      return;
+    }
+
+    const payload = {
+      bookingRequest: {
+        showId: show.showId,
+        items,
+        isMember,
+        applyFestivalDiscount,
+      },
+    };
+
+    fetch('/api/quote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) {
+          setErrorMsg(data.error);
+          setInvoice(null);
+        } else {
+          setInvoice(data.invoice);
+          setErrorMsg(null);
+        }
+      })
+      .catch(() => {
+        setErrorMsg('Error calculating price quote');
+      });
+  }, [selectedSeats, isMember, applyFestivalDiscount, show]);
+
+  const handleSeatChange = (key: string, delta: number) => {
+    if (!show) return;
+    const current = selectedSeats[key] || 0;
+    const next = Math.max(0, current + delta);
+    setSelectedSeats((prev) => ({
+      ...prev,
+      [key]: next,
+    }));
+    setSuccessMsg(null);
+  };
+
+  const handleBooking = async () => {
+    if (!show || !invoice) return;
+
+    const items = Object.keys(selectedSeats)
+      .filter((key) => selectedSeats[key] > 0)
+      .map((key) => ({
+        tierName: show.tiers[key].name,
+        quantity: selectedSeats[key],
+      }));
+
+    try {
+      const res = await fetch('/api/book', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingRequest: {
+            showId: show.showId,
+            items,
+            isMember,
+            applyFestivalDiscount,
+          },
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setErrorMsg(data.error);
+      } else {
+        setSuccessMsg(`Booking successful! Final amount paid: ${data.invoice.finalTotalFormatted}`);
+        setShow((prev) => (prev ? { ...prev, tiers: data.updatedTiers } : null));
+        // Reset quantities
+        const reset: Record<string, number> = {};
+        for (const key of Object.keys(data.updatedTiers)) {
+          reset[key] = 0;
+        }
+        setSelectedSeats(reset);
+        setInvoice(null);
+      }
+    } catch {
+      setErrorMsg('Failed to process booking');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="counter-container">
+        <p>Loading multiplex counter...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="counter-container">
+      <header className="counter-header">
+        <div>
+          <h1>🎬 Multiplex Booking Counter</h1>
+          <p style={{ color: '#94a3b8', marginTop: 4 }}>
+            Show: <strong style={{ color: '#f8fafc' }}>{show?.showName}</strong> (ID: {show?.showId})
+          </p>
+        </div>
+        <span className="counter-badge">Pricing Engine v1.0</span>
+      </header>
+
+      {errorMsg && <div className="alert alert-error">⚠️ {errorMsg}</div>}
+      {successMsg && <div className="alert alert-success">✅ {successMsg}</div>}
+
+      <div className="grid-layout">
+        {/* Left Column: Seat Selection & Offers */}
+        <div className="panel">
+          <h2 className="panel-title">Seat Selection</h2>
+
+          {show &&
+            Object.keys(show.tiers).map((key) => {
+              const tier = show.tiers[key];
+              const isSoldOut = tier.availableSeats <= 0;
+              const qty = selectedSeats[key] || 0;
+
+              return (
+                <div key={key} className={`tier-card ${isSoldOut ? 'sold-out' : ''}`}>
+                  <div className="tier-info">
+                    <h3>{tier.name}</h3>
+                    <p>
+                      ₹{(tier.pricePaisa / 100).toFixed(2)} |{' '}
+                      {isSoldOut ? (
+                        <span style={{ color: '#ef4444', fontWeight: 600 }}>SOLD OUT</span>
+                      ) : (
+                        `${tier.availableSeats} seats available`
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="tier-controls">
+                    <button
+                      type="button"
+                      className="btn-counter"
+                      disabled={qty <= 0}
+                      onClick={() => handleSeatChange(key, -1)}
+                    >
+                      -
+                    </button>
+                    <span className="qty-display">{qty}</span>
+                    <button
+                      type="button"
+                      className="btn-counter"
+                      disabled={isSoldOut || qty >= tier.availableSeats}
+                      onClick={() => handleSeatChange(key, 1)}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+
+          {/* Offers Section */}
+          <div className="offers-section">
+            <h2 className="panel-title" style={{ fontSize: 16 }}>
+              Promotional Offers
+            </h2>
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={applyFestivalDiscount}
+                onChange={(e) => setApplyFestivalDiscount(e.target.checked)}
+              />
+              <span>Apply Flat Festival Discount (₹50.00 off base tickets)</span>
+            </label>
+
+            <label className="checkbox-row">
+              <input
+                type="checkbox"
+                checked={isMember}
+                onChange={(e) => setIsMember(e.target.checked)}
+              />
+              <span>Customer is Club Member (10% off remaining subtotal, capped at ₹100)</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Right Column: Live Line-by-Line Receipt */}
+        <div className="panel">
+          <h2 className="panel-title">
+            <span>Line-by-Line Bill</span>
+            <span style={{ fontSize: 12, color: '#94a3b8' }}>Exact Paisa Reconciliation</span>
+          </h2>
+
+          {!invoice ? (
+            <div className="receipt-box" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+              Select seat tiers on the left to generate real-time itemized bill.
+            </div>
+          ) : (
+            <div className="receipt-box">
+              <div style={{ marginBottom: 8, fontWeight: 600, color: '#38bdf8' }}>
+                SEATS BREAKDOWN:
+              </div>
+              {invoice.seatLineItems.map((item, idx) => (
+                <div key={idx} className="receipt-line">
+                  <span>
+                    • {item.tierName} ({item.quantity} × {item.unitPriceFormatted})
+                  </span>
+                  <span>{item.lineTotalFormatted}</span>
+                </div>
+              ))}
+
+              <div className="receipt-line subtotal">
+                <span>Base Ticket Subtotal:</span>
+                <span>{invoice.baseTicketSubtotalFormatted}</span>
+              </div>
+
+              {invoice.discounts.totalDiscountPaisa > 0 && (
+                <>
+                  <div style={{ marginTop: 8, marginBottom: 4, fontWeight: 600, color: '#10b981' }}>
+                    DISCOUNTS APPLIED:
+                  </div>
+                  {invoice.discounts.festivalDiscountPaisa > 0 && (
+                    <div className="receipt-line discount">
+                      <span>• Festival Discount:</span>
+                      <span>-{invoice.discounts.festivalDiscountFormatted}</span>
+                    </div>
+                  )}
+                  {invoice.discounts.memberDiscountPaisa > 0 && (
+                    <div className="receipt-line discount">
+                      <span>• Member Discount:</span>
+                      <span>-{invoice.discounts.memberDiscountFormatted}</span>
+                    </div>
+                  )}
+                  <div className="receipt-line discount" style={{ fontWeight: 600 }}>
+                    <span>Total Discount:</span>
+                    <span>-{invoice.discounts.totalDiscountFormatted}</span>
+                  </div>
+                  <div className="receipt-line">
+                    <span>Net Ticket Subtotal:</span>
+                    <span>{invoice.netTicketSubtotalFormatted}</span>
+                  </div>
+                </>
+              )}
+
+              <div style={{ marginTop: 12, marginBottom: 4, fontWeight: 600, color: '#94a3b8' }}>
+                FEES & TAXES:
+              </div>
+              <div className="receipt-line">
+                <span>• Convenience Fee ({invoice.totalTickets} × ₹30.00):</span>
+                <span>{invoice.totalConvenienceFeeFormatted}</span>
+              </div>
+              <div className="receipt-line">
+                <span>• Taxable Base:</span>
+                <span>₹{(invoice.taxableAmountPaisa / 100).toFixed(2)}</span>
+              </div>
+              <div className="receipt-line">
+                <span>• GST ({invoice.gstRatePercent}%):</span>
+                <span>{invoice.gstAmountFormatted}</span>
+              </div>
+
+              <div className="receipt-line total">
+                <span>TOTAL PAYABLE:</span>
+                <span>{invoice.finalTotalFormatted}</span>
+              </div>
+
+              <button
+                type="button"
+                className="btn-book"
+                onClick={handleBooking}
+              >
+                Confirm Booking & Print ({invoice.finalTotalFormatted})
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default App;
