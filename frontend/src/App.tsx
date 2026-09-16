@@ -42,6 +42,26 @@ interface Invoice {
   }>;
 }
 
+async function apiFetch(path: string, options?: RequestInit): Promise<Response> {
+  const urls = [
+    `http://localhost:4000/api${path}`,
+    `http://127.0.0.1:4000/api${path}`,
+    `/api${path}`,
+  ];
+  let lastErr: any = null;
+  for (const url of urls) {
+    try {
+      const res = await fetch(url, options);
+      if (res.status < 500) {
+        return res;
+      }
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr || new Error('Failed to connect to backend server');
+}
+
 export function App() {
   const [show, setShow] = useState<ShowConfig | null>(null);
   const [selectedSeats, setSelectedSeats] = useState<Record<string, number>>({});
@@ -56,7 +76,7 @@ export function App() {
   const fetchShow = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/show');
+      const res = await apiFetch('/show');
       const data = await res.json();
       setShow(data.show);
       // Initialize quantities to 0
@@ -103,7 +123,7 @@ export function App() {
       },
     };
 
-    fetch('/api/quote', {
+    apiFetch('/quote', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -145,7 +165,7 @@ export function App() {
       }));
 
     try {
-      const res = await fetch('/api/book', {
+      const res = await apiFetch('/book', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

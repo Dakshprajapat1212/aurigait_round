@@ -7,7 +7,7 @@ import { OffersConfig, ShowConfig } from './types';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(cors());
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // In-memory demo show configuration (cinema counter data)
@@ -107,7 +107,7 @@ app.post('/api/book', (req: Request, res: Response) => {
 });
 
 if (require.main === module) {
-  app.listen(PORT, () => {
+  app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`🎬 Multiplex Pricing Engine Backend API running on http://localhost:${PORT}`);
   });
 }
