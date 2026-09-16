@@ -259,12 +259,11 @@ aurigait_round/
 - **npm**: v9 or higher
 
 ### Install Dependencies:
-From the root workspace directory, install dependencies for root, backend, and frontend:
+From the root workspace directory, run:
 ```bash
 npm install
-npm --prefix backend install
-npm --prefix frontend install
 ```
+*(The automated `postinstall` hook will automatically install dependencies for root, backend, and frontend).*
 
 ---
 
