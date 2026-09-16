@@ -2489,3 +2489,164 @@ https://github.com/Dakshprajapat1212/auri gait_round also keep pushing code here
 
 ---
 
+### ASSISTANT (Turn 9) [2026-09-16T10:08:13Z]
+
+### 1. Updated `AI_LOGS.md` & Pushed to GitHub
+
+I just exported our latest conversation turn (including your prompt) directly into **`AI_LOGS.md`**, committed, and pushed it to your GitHub repository:
+👉 **[https://github.com/Dakshprajapat1212/aurigait_round](https://github.com/Dakshprajapat1212/aurigait_round)**
+
+Commit: `4aa276d - docs: update AI_LOGS.md with latest conversation turns`
+
+---
+
+### 2. What Database Did We Use?
+
+Currently, we are using an **In-Memory Stateful Store** inside `backend/src/server.ts`.
+
+#### **Why In-Memory Was Used Initially:**
+1. **Evaluator Reliability**: When the evaluator clones your repo and runs `npm test` or `npm run dev:backend`, they will likely **not** have a local MongoDB service running on their machine. An unhandled MongoDB connection error (`ECONNREFUSED 127.0.0.1:27017`) can cause the server to crash immediately on the evaluator's computer.
+2. **Deterministic Pricing Engine Focus**: The problem specifically requires:
+   > *"Build a pricing engine the counter can trust... Keep business/pricing logic independent from presentation where practical."*
+   An in-memory store keeps the core pricing engine pure, deterministic, and 100% free of external network/database dependencies.
+3. **Atomic Inventory Control**: The in-memory store accurately tracks available seat inventory per tier and decrements it when a booking is confirmed.
+
+---
+
+### 3. Option: Would You Like Us to Add MongoDB (Mongoose)?
+
+We can easily add **MongoDB with Mongoose** with a **hybrid/graceful fallback**:
+* **If MongoDB is running** (or a MongoDB Atlas URI is provided in `.env`): It connects and saves all shows, seat tiers, and booking invoices in MongoDB collections (`shows`, `bookings`).
+* **If MongoDB is NOT running**: It logs a friendly message and seamlessly falls back to the in-memory store so the evaluator never experiences a crash.
+
+Would you like me to add MongoDB / Mongoose models now, or keep the clean in-memory architecture?
+
+---
+
+### USER (Turn 10) [2026-09-16T10:09:19Z]
+
+are we using in  memory ?? is it okay to use this project ??  can u explain what we used and how does it working
+
+---
+
+### ASSISTANT (Turn 10) [2026-09-16T10:09:19Z]
+
+### 1. Is In-Memory Okay to Use for This Project?
+
+**Yes — in fact, it is the best engineering decision for this specific assessment.** 
+
+Here is why:
+
+1. **The Problem Is a Pricing Engine, Not a Database System**:
+   The prompt explicitly states:
+   > *"The multiplex booking counter keeps mis-pricing tickets and the queue is getting angry... Build a pricing engine the counter can trust. (The messy real-world money rules are the point — handle each correctly...)"*
+   
+   The evaluators are evaluating:
+   - Can you calculate money to the **exact paisa**?
+   - Do you handle **fractional rounding** and **tax rules** properly?
+   - Do you enforce **seat availability** and **sold-out tiers**?
+   - Are your discounts **stacked** and **capped** correctly?
+   - Does your bill have a **clear line-by-line breakdown**?
+
+2. **Zero-Setup Guarantee for the Evaluator**:
+   When the evaluator evaluates your GitHub repository (often on **GitHub Codespaces** or an automated evaluation runner), **MongoDB is typically not installed or running**.
+   - If an application strictly depends on a local MongoDB database, running `npm start` will immediately **crash** with:
+     `MongoServerSelectionError: connect ECONNREFUSED 127.0.0.1:27017`
+   - With an in-memory stateful store, the evaluator simply clones your repo, runs `npm test`, and all **27 tests pass in 2 seconds** with zero setup errors!
+
+3. **It Still Behaves Like a Real Live Database**:
+   In-memory does **not** mean static/fake. Our `server.ts` maintains active state in Node.js memory:
+   - When you book 2 tickets for **Silver**, available seats dynamically drop from 50 to 48.
+   - When a tier has 0 seats left, it dynamically changes to **SOLD OUT** and blocks future bookings with `SoldOutTierError`.
+
+---
+
+### 2. What We Built & How It Works
+
+Here is the exact architecture and how each piece functions:
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      1. React Frontend (UI Layer)                       │
+│  • Shows available seats & disables sold-out tiers                      │
+│  • Interactive counters (+ / -) for Silver, Gold, Recliner              │
+│  • Toggles for Festival Discount & Member Discount                      │
+│  • Calls backend API for live price quote as you click                  │
+│  • Renders real-time line-by-line itemized receipt                      │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ HTTP (port 3000 -> 4000)
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     2. Express REST API (Backend)                       │
+│  • GET  /api/show  -> Returns current show config & remaining seats     │
+│  • POST /api/quote -> Calculates itemized invoice in real-time          │
+│  • POST /api/book  -> Validates availability & decrements seat inventory│
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   3. Core Pricing Engine (Domain)                       │
+│  Pipeline:                                                              │
+│  1. Check tier exists & seats available (rejects sold-out/overbooking)  │
+│  2. Compute base subtotal: sum(Unit Price × Quantity)                   │
+│  3. Flat Festival Discount: min(festivalDiscount, baseSubtotal)         │
+│  4. Member % Discount: calculated on remaining balance, capped at maxCap│
+│  5. Convenience Fee: totalTickets × feePerTicket                        │
+│  6. GST Tax: ROUND_HALF_UP(Taxable Base × GST %)                        │
+│  7. Exact Reconciliation: Total === NetTickets + Fees + GST             │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     4. Money & Paisa Module                             │
+│  • Internal integer arithmetic: 15000 paisa = ₹150.00                   │
+│  • 100% immune to JavaScript floating-point errors (0.1 + 0.2 != 0.3)  │
+│  • Precise ROUND_HALF_UP rounding for all tax & discount fractions      │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 3. Step-by-Step Example of How the Math Works
+
+Suppose a customer at the counter selects:
+- **2 Silver seats** @ ₹150.00 each = **₹300.00**
+- **1 Recliner seat** @ ₹400.00 each = **₹400.00**
+- Total tickets = **3**
+- Festival Discount: Flat **₹50.00** off
+- Member Discount: **10%** off, capped at **₹100.00**
+- Convenience fee: **₹30.00** per ticket
+- GST: **18%**
+
+Here is the exact calculation flow:
+1. **Base Ticket Subtotal**: ₹300.00 + ₹400.00 = **₹700.00** (70,000 paisa).
+2. **Festival Discount**: Flat **-₹50.00** (5,000 paisa).
+   - Remaining ticket subtotal = ₹700.00 - ₹50.00 = **₹650.00** (65,000 paisa).
+3. **Member Discount**: 10% of remaining ₹650.00 = **-₹65.00** (6,500 paisa).
+   - Since ₹65.00 $\le$ ₹100.00 cap, full ₹65.00 is applied.
+4. **Net Ticket Subtotal**: ₹700.00 - (₹50.00 + ₹65.00) = **₹585.00** (58,500 paisa).
+5. **Convenience Fee**: 3 tickets × ₹30.00 = **₹90.00** (9,000 paisa).
+6. **Taxable Base**: Net Tickets (₹585.00) + Fees (₹90.00) = **₹675.00** (67,500 paisa).
+7. **GST (18%)**: 18% of ₹675.00 = **₹121.50** (12,150 paisa).
+8. **Final Payable Total**: ₹675.00 + ₹121.50 = **₹796.50** (79,650 paisa).
+9. **Reconciliation Invariant**:
+   ₹585.00 (tickets) + ₹90.00 (fees) + ₹121.50 (tax) $\equiv$ **₹796.50**. Exactly reconciled down to 0 paisa mismatch.
+
+---
+
+### 4. What If You Want MongoDB Included as Well?
+
+If you want MongoDB explicitly in the project to fulfill a "MERN" preference, we can add a **Hybrid Database Adapter**:
+- If MongoDB is installed and running, it stores shows and bookings in MongoDB.
+- If MongoDB is not running, it falls back to the in-memory store so it **never crashes** during evaluation.
+
+Would you like me to add this optional MongoDB layer now, or keep the current clean in-memory architecture?
+
+---
+
+### USER (Turn 11) [2026-09-16T10:13:59Z]
+
+and what kind of query are we suing to mamnges datas in efficent for saving and how we stronging data expalin this  evthing
+
+---
+
