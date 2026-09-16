@@ -4489,3 +4489,97 @@ make  the project that much easy to run so kike idk why u were doing curl agan a
 
 ---
 
+### ASSISTANT (Turn 24) [2026-09-16T10:47:29Z]
+
+Everything has been simplified so that **any evaluator or tester can test the entire project in seconds with zero friction**. No manual curls or complex steps needed.
+
+---
+
+### How Any Tester Can Test (Under 60 Seconds)
+
+#### 1. In the Web UI (`http://localhost:3000`)
+Open `http://localhost:3000` in your browser. Right at the top of the cinema counter, you will see the **⚡ Evaluator Quick Actions** toolbar:
+
+1. **🎫 1-Click Test Booking**:
+   - One click instantly loads **2 Silver + 1 Gold tickets**, turns on **Member Discount** and **Festival Offer**.
+   - The live itemized receipt immediately calculates Base Subtotal, Flat Festival Discount, Member 10% Discount, Convenience Fee, 18% GST, and verifies exact paisa reconciliation.
+2. **🧪 1-Click Test "The Twist"**:
+   - One click opens the sanitizer panel, loads the dirty real-world dataset (duplicates, lowercase/uppercase variants, European commas, blank values, negative numbers), runs the cleaning engine, displays the color-coded audit summary (🟢 Accepted, 🟡 De-duplicated, 🔴 Rejected), and updates the cinema counter with the cleaned tiers.
+3. **🔄 Reset All**:
+   - Resets all seats and restored original show tiers.
+
+Inside the Importer panel, there are also **"📄 Load Sample CSV"** and **"📋 Load Sample JSON"** preset buttons so testers don't even need to open a separate file.
+
+---
+
+#### 2. In Terminal (Standard Test Commands)
+
+For testers evaluating via the command line:
+
+- **Run all 35 Automated Unit Tests**:
+  ```bash
+  npm test
+  ```
+- **Test "The Twist" CLI Audit Runner**:
+  ```bash
+  npm run test:import
+  ```
+  *(Processes `sample_data/messy_prices.csv` and prints the complete audit report)*
+- **Run the CLI Booking Engine Demo**:
+  ```bash
+  npm run demo
+  ```
+- **Run Fullstack (Backend + Frontend)**:
+  ```bash
+  npm run dev
+  ```
+
+All changes, sample test files (`sample_data/messy_prices.csv` & `sample_data/messy_prices.json`), and updated docs have been committed and pushed to GitHub [`origin/main`](https://github.com/Dakshprajapat1212/aurigait_round).
+
+---
+
+### USER (Turn 25) [2026-09-16T10:47:56Z]
+
+now run my project lemee test it
+
+---
+
+### ASSISTANT (Turn 25) [2026-09-16T10:48:02Z]
+
+Your project is running right now and ready for testing!
+
+### Open in your browser:
+👉 **[http://localhost:3000](http://localhost:3000)**
+
+---
+
+### What to Test:
+
+1. **Top Quick Action Buttons**:
+   - Click **`🎫 1-Click Test Booking (2 Silver + 1 Gold + Offers)`**:
+     - Watch the quantities automatically set to 2 Silver and 1 Gold.
+     - Both Member Discount and Festival Offer apply.
+     - The live invoice instantly renders with full itemized breakdown (Subtotal, Discounts, Convenience Fee, GST, and Final Total).
+   - Click **`🧪 1-Click Test "The Twist" (Import Messy Prices)`**:
+     - Opens the importer panel and immediately sanitizes our 16-record messy test file.
+     - Displays the **🟢 5 Accepted**, **🟡 4 De-duplicated**, and **🔴 7 Rejected** audit cards.
+     - Automatically updates the booking counter with the newly cleaned tiers!
+   - Click **`🔄 Reset All`**: Resets the counter back to default.
+
+2. **Manual Controls**:
+   - Use the **`+`** / **`-`** buttons on any tier (Silver, Gold, Recliner, Balcony, Executive).
+   - Toggle the checkboxes: **"Multiplex Member Club"** and **"Festival Discount"**.
+   - Click **"Confirm & Complete Booking"** to finalize the transaction and deduct seats from inventory.
+
+Both servers are active:
+- **Frontend**: `http://localhost:3000`
+- **Backend API**: `http://localhost:4000`
+
+---
+
+### USER (Turn 26) [2026-09-16T10:49:12Z]
+
+make ui freindlly
+
+---
+

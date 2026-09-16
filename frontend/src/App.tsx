@@ -311,71 +311,69 @@ export function App() {
     }
   };
 
+  const getTierIcon = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('silver')) return '🥈';
+    if (lower.includes('gold')) return '🥇';
+    if (lower.includes('recliner')) return '👑';
+    if (lower.includes('balcony')) return '🏛️';
+    if (lower.includes('executive')) return '⭐';
+    if (lower.includes('vip')) return '💎';
+    return '🎟️';
+  };
+
   if (loading) {
     return (
-      <div className="counter-container">
-        <p>Loading multiplex counter...</p>
+      <div className="counter-container" style={{ textAlign: 'center', paddingTop: 80 }}>
+        <h2>🎬 Loading Multiplex Counter...</h2>
+        <p style={{ color: '#94a3b8', marginTop: 8 }}>Connecting to pricing engine...</p>
       </div>
     );
   }
 
   return (
     <div className="counter-container">
-      <header className="counter-header">
-        <div>
-          <h1>🎬 Multiplex Booking Counter</h1>
-          <p style={{ color: '#94a3b8', marginTop: 4 }}>
-            Show: <strong style={{ color: '#f8fafc' }}>{show?.showName}</strong> (ID: {show?.showId})
-          </p>
+      {/* 🎬 Cinema Top Banner */}
+      <header className="cinema-banner">
+        <div className="banner-title-area">
+          <h1>🎬 Multiplex Ticket Counter</h1>
+          <div className="banner-meta">
+            <span>Show: <strong style={{ color: '#f8fafc' }}>{show?.showName}</strong></span>
+            <span className="movie-badge">Dolby Atmos 7.1</span>
+            <span style={{ color: '#64748b' }}>ID: {show?.showId}</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <button
             type="button"
-            className="btn-counter"
-            style={{ width: 'auto', padding: '6px 14px', fontSize: 13 }}
+            className="btn-tool btn-tool-purple"
             onClick={() => setShowImporter(!showImporter)}
           >
             {showImporter ? '✕ Close Importer' : '📥 The Twist: Import Messy Price List'}
           </button>
-          <span className="counter-badge">Pricing Engine v1.0</span>
         </div>
       </header>
 
-      {/* ⚡ Tester Quick Actions Toolbar */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 10,
-          padding: '12px 16px',
-          background: '#1e293b',
-          borderRadius: 8,
-          marginBottom: 20,
-          alignItems: 'center',
-          border: '1px solid #475569',
-        }}
-      >
-        <span style={{ fontSize: 13, fontWeight: 700, color: '#38bdf8' }}>⚡ Evaluator / Tester Quick Actions:</span>
+      {/* ⚡ Evaluator Quick Actions Bar */}
+      <div className="tester-toolbar">
+        <span className="toolbar-label">⚡ Evaluator Quick Test:</span>
         <button
           type="button"
-          className="btn-counter"
-          style={{ width: 'auto', padding: '6px 14px', fontSize: 13, background: '#0284c7', color: '#fff' }}
+          className="btn-tool btn-tool-blue"
           onClick={handleQuickTestBooking}
         >
           🎫 1-Click Test Booking (2 Silver + 1 Gold + Offers)
         </button>
         <button
           type="button"
-          className="btn-counter"
-          style={{ width: 'auto', padding: '6px 14px', fontSize: 13, background: '#7c3aed', color: '#fff' }}
+          className="btn-tool btn-tool-purple"
           onClick={handleQuickTestTheTwist}
         >
-          🧪 1-Click Test "The Twist" (Import Messy Prices)
+          🧪 1-Click Test "The Twist" (Messy Prices)
         </button>
         <button
           type="button"
-          className="btn-counter"
-          style={{ width: 'auto', padding: '6px 14px', fontSize: 13, background: '#334155', color: '#cbd5e1' }}
+          className="btn-tool btn-tool-neutral"
           onClick={handleResetAll}
         >
           🔄 Reset All
@@ -385,31 +383,35 @@ export function App() {
       {errorMsg && <div className="alert alert-error">⚠️ {errorMsg}</div>}
       {successMsg && <div className="alert alert-success">✅ {successMsg}</div>}
 
-      {/* The Twist: Messy Price List Sanitizer Panel */}
+      {/* 📥 The Twist: Messy Price List Sanitizer Panel */}
       {showImporter && (
-        <div className="panel" style={{ marginBottom: 24, borderColor: '#3b82f6' }}>
+        <div className="panel" style={{ marginBottom: 24, borderColor: '#7c3aed' }}>
           <div className="panel-title">
-            <span>📥 The Twist: Messy Seat-Class Price List Importer</span>
-            <span style={{ fontSize: 12, color: '#38bdf8' }}>De-duplicates, Cleans Formats & Audits</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              📥 The Twist: Messy Seat-Class Price List Importer
+            </span>
+            <span style={{ fontSize: 12, color: '#a78bfa', fontWeight: 600 }}>
+              Automatic Deduplication & Sanity Audit
+            </span>
           </div>
-          <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 12 }}>
-            Input raw, inconsistent tiers (with duplicate names in different cases, currency symbols, whitespace, blank values, and negative prices). The engine will clean it into a valid price list and provide a full audit report.
+          <p style={{ fontSize: 13, color: '#94a3b8', marginBottom: 14, lineHeight: 1.5 }}>
+            Paste any uncleaned, inconsistent seat tier records (with casing duplicates like <code>Silver/silver</code>, symbols like <code>₹150</code> or <code>180,50</code>, blank values, or negative numbers). The engine cleans it and outputs an audit report.
           </p>
 
-          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: '#94a3b8', alignSelf: 'center' }}>Presets:</span>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 12, color: '#94a3b8', alignSelf: 'center', fontWeight: 600 }}>Presets:</span>
             <button
               type="button"
-              className="btn-counter"
-              style={{ width: 'auto', padding: '4px 10px', fontSize: 12, background: '#334155', color: '#f8fafc' }}
+              className="btn-tool btn-tool-neutral"
+              style={{ padding: '5px 12px', fontSize: 12 }}
               onClick={() => setImportText(SAMPLE_MESSY_CSV)}
             >
               📄 Load Sample CSV
             </button>
             <button
               type="button"
-              className="btn-counter"
-              style={{ width: 'auto', padding: '4px 10px', fontSize: 12, background: '#334155', color: '#f8fafc' }}
+              className="btn-tool btn-tool-neutral"
+              style={{ padding: '5px 12px', fontSize: 12 }}
               onClick={() => setImportText(SAMPLE_MESSY_JSON)}
             >
               📋 Load Sample JSON
@@ -417,62 +419,79 @@ export function App() {
           </div>
 
           <textarea
-            rows={6}
+            rows={7}
             value={importText}
             onChange={(e) => setImportText(e.target.value)}
             style={{
               width: '100%',
               backgroundColor: '#090d16',
-              border: '1px solid #334155',
-              borderRadius: 8,
+              border: '1.5px solid #334155',
+              borderRadius: 10,
               padding: 12,
               color: '#f8fafc',
-              fontFamily: 'monospace',
+              fontFamily: 'JetBrains Mono, monospace',
               fontSize: 13,
               marginBottom: 12,
+              lineHeight: 1.5,
             }}
           />
 
           <div style={{ display: 'flex', gap: 12 }}>
             <button
               type="button"
-              className="btn-book"
-              style={{ width: 'auto', padding: '10px 20px', marginTop: 0 }}
+              className="btn-tool btn-tool-purple"
+              style={{ padding: '10px 22px', fontSize: 14 }}
               disabled={importing}
               onClick={handleImportTiers}
             >
-              {importing ? 'Processing...' : 'Clean & Import Price List'}
+              {importing ? 'Processing Data...' : '🚀 Clean & Import to Multiplex'}
             </button>
           </div>
 
           {importReport && (
-            <div style={{ marginTop: 18, borderTop: '1px solid #334155', paddingTop: 16 }}>
-              <h3 style={{ fontSize: 15, marginBottom: 10, color: '#e2e8f0' }}>
-                📋 Import Audit Report (Processed: {importReport.totalProcessed})
+            <div style={{ marginTop: 20, borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: 16 }}>
+              <h3 style={{ fontSize: 15, marginBottom: 12, color: '#f8fafc' }}>
+                📋 Importer Audit Summary (Total: {importReport.totalProcessed} records)
               </h3>
-              <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-                <span style={{ color: '#10b981', fontWeight: 600 }}>🟢 Imported: {importReport.importedCount}</span>
-                <span style={{ color: '#f59e0b', fontWeight: 600 }}>🟡 De-duplicated: {importReport.deduplicatedCount}</span>
-                <span style={{ color: '#ef4444', fontWeight: 600 }}>🔴 Rejected: {importReport.rejectedCount}</span>
+              <div className="audit-pills-row">
+                <div className="audit-pill pill-accepted">
+                  🟢 Accepted: {importReport.importedCount}
+                </div>
+                <div className="audit-pill pill-dedup">
+                  🟡 De-duplicated: {importReport.deduplicatedCount}
+                </div>
+                <div className="audit-pill pill-rejected">
+                  🔴 Rejected: {importReport.rejectedCount}
+                </div>
               </div>
 
               {importReport.imported.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <strong style={{ color: '#10b981', fontSize: 13 }}>Cleaned & Imported Tiers:</strong>
-                  <ul style={{ fontSize: 13, marginLeft: 20, color: '#cbd5e1', marginTop: 4 }}>
+                <div style={{ marginBottom: 14 }}>
+                  <strong style={{ color: '#34d399', fontSize: 13 }}>🟢 Cleaned & Active Tiers:</strong>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
                     {importReport.imported.map((t: any, idx: number) => (
-                      <li key={idx}>
+                      <span
+                        key={idx}
+                        style={{
+                          background: 'rgba(16,185,129,0.1)',
+                          border: '1px solid rgba(16,185,129,0.25)',
+                          padding: '4px 10px',
+                          borderRadius: 6,
+                          fontSize: 12,
+                          color: '#e2e8f0',
+                        }}
+                      >
                         <strong>{t.name}</strong>: {t.priceFormatted} ({t.availableSeats} seats)
-                      </li>
+                      </span>
                     ))}
-                  </ul>
+                  </div>
                 </div>
               )}
 
               {importReport.deduplicated.length > 0 && (
-                <div style={{ marginBottom: 12 }}>
-                  <strong style={{ color: '#f59e0b', fontSize: 13 }}>De-duplicated Tiers (Ignored redundant entries):</strong>
-                  <ul style={{ fontSize: 13, marginLeft: 20, color: '#94a3b8', marginTop: 4 }}>
+                <div style={{ marginBottom: 14 }}>
+                  <strong style={{ color: '#fbbf24', fontSize: 13 }}>🟡 De-duplicated Entries:</strong>
+                  <ul style={{ fontSize: 12, marginLeft: 20, color: '#94a3b8', marginTop: 4, lineHeight: 1.6 }}>
                     {importReport.deduplicated.map((d: any, idx: number) => (
                       <li key={idx}>{d.reason}</li>
                     ))}
@@ -482,11 +501,11 @@ export function App() {
 
               {importReport.rejected.length > 0 && (
                 <div>
-                  <strong style={{ color: '#ef4444', fontSize: 13 }}>Rejected Entries:</strong>
-                  <ul style={{ fontSize: 13, marginLeft: 20, color: '#fca5a5', marginTop: 4 }}>
+                  <strong style={{ color: '#f87171', fontSize: 13 }}>🔴 Rejected Entries:</strong>
+                  <ul style={{ fontSize: 12, marginLeft: 20, color: '#fca5a5', marginTop: 4, lineHeight: 1.6 }}>
                     {importReport.rejected.map((r: any, idx: number) => (
                       <li key={idx}>
-                        {JSON.stringify(r.raw)} &rarr; <em>{r.reason}</em>
+                        <code>{JSON.stringify(r.raw)}</code> &rarr; <em>{r.reason}</em>
                       </li>
                     ))}
                   </ul>
@@ -497,10 +516,16 @@ export function App() {
         </div>
       )}
 
+      {/* Main Booking Interface */}
       <div className="grid-layout">
         {/* Left Column: Seat Selection & Offers */}
         <div className="panel">
-          <h2 className="panel-title">Seat Selection</h2>
+          <div className="panel-title">
+            <span>🎟️ Select Tickets</span>
+            <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>
+              {Object.values(selectedSeats).reduce((a, b) => a + b, 0)} selected
+            </span>
+          </div>
 
           {show &&
             Object.keys(show.tiers).map((key) => {
@@ -509,17 +534,24 @@ export function App() {
               const qty = selectedSeats[key] || 0;
 
               return (
-                <div key={key} className={`tier-card ${isSoldOut ? 'sold-out' : ''}`}>
-                  <div className="tier-info">
-                    <h3>{tier.name}</h3>
-                    <p>
-                      ₹{(tier.pricePaisa / 100).toFixed(2)} |{' '}
-                      {isSoldOut ? (
-                        <span style={{ color: '#ef4444', fontWeight: 600 }}>SOLD OUT</span>
-                      ) : (
-                        `${tier.availableSeats} seats available`
-                      )}
-                    </p>
+                <div
+                  key={key}
+                  className={`tier-card ${isSoldOut ? 'sold-out' : ''} ${qty > 0 ? 'selected' : ''}`}
+                >
+                  <div className="tier-main-info">
+                    <div className="tier-icon-badge">{getTierIcon(tier.name)}</div>
+                    <div>
+                      <div className="tier-name">{tier.name}</div>
+                      <div className="tier-subtext">
+                        <span className="tier-price-pill">₹{(tier.pricePaisa / 100).toFixed(2)}</span>
+                        <span>•</span>
+                        {isSoldOut ? (
+                          <span className="tier-stock-badge sold-out">SOLD OUT</span>
+                        ) : (
+                          <span className="tier-stock-badge">{tier.availableSeats} seats left</span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="tier-controls">
@@ -528,6 +560,7 @@ export function App() {
                       className="btn-counter"
                       disabled={qty <= 0}
                       onClick={() => handleSeatChange(key, -1)}
+                      title="Decrease tickets"
                     >
                       -
                     </button>
@@ -537,6 +570,7 @@ export function App() {
                       className="btn-counter"
                       disabled={isSoldOut || qty >= tier.availableSeats}
                       onClick={() => handleSeatChange(key, 1)}
+                      title="Increase tickets"
                     >
                       +
                     </button>
@@ -546,46 +580,65 @@ export function App() {
             })}
 
           {/* Offers Section */}
-          <div className="offers-section">
-            <h2 className="panel-title" style={{ fontSize: 16 }}>
-              Promotional Offers
-            </h2>
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={applyFestivalDiscount}
-                onChange={(e) => setApplyFestivalDiscount(e.target.checked)}
-              />
-              <span>Apply Flat Festival Discount (₹50.00 off base tickets)</span>
-            </label>
+          <div style={{ marginTop: 24 }}>
+            <div className="panel-title" style={{ fontSize: 16 }}>
+              <span>🎁 Promotional Offers & Discounts</span>
+            </div>
 
-            <label className="checkbox-row">
-              <input
-                type="checkbox"
-                checked={isMember}
-                onChange={(e) => setIsMember(e.target.checked)}
-              />
-              <span>Customer is Club Member (10% off remaining subtotal, capped at ₹100)</span>
-            </label>
+            <div className="offers-grid">
+              <label className={`offer-card ${applyFestivalDiscount ? 'active' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={applyFestivalDiscount}
+                  onChange={(e) => setApplyFestivalDiscount(e.target.checked)}
+                />
+                <div className="offer-info">
+                  <h4>🎉 Festival Bonanza</h4>
+                  <p>Flat ₹50.00 OFF on base tickets (capped at ticket subtotal)</p>
+                </div>
+              </label>
+
+              <label className={`offer-card ${isMember ? 'active' : ''}`}>
+                <input
+                  type="checkbox"
+                  checked={isMember}
+                  onChange={(e) => setIsMember(e.target.checked)}
+                />
+                <div className="offer-info">
+                  <h4>👑 CinePass Member</h4>
+                  <p>10% OFF on remaining subtotal (max savings cap ₹100.00)</p>
+                </div>
+              </label>
+            </div>
           </div>
         </div>
 
         {/* Right Column: Live Line-by-Line Receipt */}
         <div className="panel">
-          <h2 className="panel-title">
-            <span>Line-by-Line Bill</span>
-            <span style={{ fontSize: 12, color: '#94a3b8' }}>Exact Paisa Reconciliation</span>
-          </h2>
+          <div className="panel-title">
+            <span>🧾 Live Bill Summary</span>
+            <span style={{ fontSize: 12, color: '#38bdf8', fontWeight: 600 }}>Real-time Quote</span>
+          </div>
 
           {!invoice ? (
-            <div className="receipt-box" style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-              Select seat tiers on the left to generate real-time itemized bill.
+            <div
+              className="ticket-receipt"
+              style={{ textAlign: 'center', padding: '60px 20px', color: '#64748b' }}
+            >
+              <div style={{ fontSize: 36, marginBottom: 12 }}>🎟️</div>
+              <h3 style={{ fontSize: 16, color: '#94a3b8', marginBottom: 6 }}>No Tickets Selected</h3>
+              <p style={{ fontSize: 13 }}>
+                Use the counter steppers on the left or click <strong>1-Click Test Booking</strong> above.
+              </p>
             </div>
           ) : (
-            <div className="receipt-box">
-              <div style={{ marginBottom: 8, fontWeight: 600, color: '#38bdf8' }}>
-                SEATS BREAKDOWN:
+            <div className="ticket-receipt">
+              <div className="ticket-receipt-header">
+                <h3>CINEMA E-TICKET INVOICE</h3>
+                <p>Friday Night Blockbuster • Screen 4</p>
               </div>
+
+              <div className="receipt-section-label">Seats Breakdown</div>
               {invoice.seatLineItems.map((item, idx) => (
                 <div key={idx} className="receipt-line">
                   <span>
@@ -596,29 +649,29 @@ export function App() {
               ))}
 
               <div className="receipt-line subtotal">
-                <span>Base Ticket Subtotal:</span>
+                <span>Base Ticket Subtotal ({invoice.totalTickets} seats):</span>
                 <span>{invoice.baseTicketSubtotalFormatted}</span>
               </div>
 
               {invoice.discounts.totalDiscountPaisa > 0 && (
                 <>
-                  <div style={{ marginTop: 8, marginBottom: 4, fontWeight: 600, color: '#10b981' }}>
-                    DISCOUNTS APPLIED:
+                  <div className="receipt-section-label" style={{ color: '#34d399' }}>
+                    Discounts Applied
                   </div>
                   {invoice.discounts.festivalDiscountPaisa > 0 && (
                     <div className="receipt-line discount">
-                      <span>• Festival Discount:</span>
+                      <span>• Festival Flat Discount:</span>
                       <span>-{invoice.discounts.festivalDiscountFormatted}</span>
                     </div>
                   )}
                   {invoice.discounts.memberDiscountPaisa > 0 && (
                     <div className="receipt-line discount">
-                      <span>• Member Discount:</span>
+                      <span>• CinePass Member 10% Discount:</span>
                       <span>-{invoice.discounts.memberDiscountFormatted}</span>
                     </div>
                   )}
-                  <div className="receipt-line discount" style={{ fontWeight: 600 }}>
-                    <span>Total Discount:</span>
+                  <div className="receipt-line discount" style={{ fontWeight: 700 }}>
+                    <span>Total Savings:</span>
                     <span>-{invoice.discounts.totalDiscountFormatted}</span>
                   </div>
                   <div className="receipt-line">
@@ -628,9 +681,7 @@ export function App() {
                 </>
               )}
 
-              <div style={{ marginTop: 12, marginBottom: 4, fontWeight: 600, color: '#94a3b8' }}>
-                FEES & TAXES:
-              </div>
+              <div className="receipt-section-label">Convenience & Taxes</div>
               <div className="receipt-line">
                 <span>• Convenience Fee ({invoice.totalTickets} × ₹30.00):</span>
                 <span>{invoice.totalConvenienceFeeFormatted}</span>
@@ -645,8 +696,12 @@ export function App() {
               </div>
 
               <div className="receipt-line total">
-                <span>TOTAL PAYABLE:</span>
+                <span>TOTAL AMOUNT:</span>
                 <span>{invoice.finalTotalFormatted}</span>
+              </div>
+
+              <div className="reconciled-seal">
+                <span>🛡️ Reconciled to the exact paisa (0.01 INR precision)</span>
               </div>
 
               <button
@@ -654,7 +709,7 @@ export function App() {
                 className="btn-book"
                 onClick={handleBooking}
               >
-                Confirm Booking & Print ({invoice.finalTotalFormatted})
+                Confirm & Book Now • {invoice.finalTotalFormatted}
               </button>
             </div>
           )}
