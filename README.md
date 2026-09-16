@@ -4,6 +4,17 @@ A deterministic, audit-ready cinema ticket pricing engine built in TypeScript on
 
 ---
 
+> ### ⚡ Evaluator Quickstart (Copy & Paste)
+> ```bash
+> npm install         # 1. Installs all root, backend & frontend dependencies
+> npm test            # 2. Runs all 35 unit tests (all passing)
+> npm run test:import # 3. Runs The Twist messy price list verification
+> npm run dev         # 4. Starts backend (port 4000) & frontend (port 3000)
+> ```
+> *Web App: Open **http://localhost:3000** for interactive 1-click test actions.*
+
+---
+
 ## 1. Overview
 
 This project provides a reliable pricing backend and counter interface for cinema multiplexes. Real-world cinema operations frequently face mis-pricing issues at counter checkouts due to dirty pricing sheets, ambiguous discounts, and fractional rounding errors.
