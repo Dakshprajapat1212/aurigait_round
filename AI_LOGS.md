@@ -3153,3 +3153,505 @@ Your solution must also import a messy seat-class price list — with duplicate 
 
 ---
 
+### USER (Turn 20) [2026-09-16T10:37:13Z]
+
+Yes — this twist changes the project significantly, but the idea is actually simple once you see what they’re asking.
+
+Before, we were building:
+
+A cinema pricing calculator.
+
+Now they’re saying:
+
+Before calculating the ticket price, the system must first clean a messy price list and turn it into a trustworthy price list.
+
+So the complete system becomes:
+
+MESSY PRICE LIST
+      ↓
+   IMPORT
+      ↓
+   CLEAN IT
+      ↓
+VALIDATE PRICES
+      ↓
+DE-DUPLICATE
+      ↓
+REJECT BAD DATA
+      ↓
+CLEAN PRICE LIST
+      ↓
+PRICING ENGINE
+      ↓
+DISCOUNTS → FEE → GST
+      ↓
+FINAL BILL
+
+1. What does “messy seat-class price list” mean?
+
+Imagine the cinema gives us this input:
+
+Silver, ₹150
+GOLD, 250
+silver, 150
+Recliner, ₹400.00
+Gold, ₹250
+Recliner, 450
+Gold,
+Silver, -100
+VIP, abc
+
+This is messy real-world data.
+
+There are several problems.
+
+⸻
+
+2. Duplicate names in different cases
+
+Look at:
+
+Silver
+silver
+SILVER
+
+A computer might initially think these are three different names.
+
+But humans know:
+
+Silver = silver = SILVER
+
+So we need to normalize the name.
+
+For example:
+
+" Silver " → "silver"
+"SILVER"   → "silver"
+"silver"   → "silver"
+
+Then we know they’re the same seat class.
+
+Why is this important?
+
+Suppose:
+
+Silver = ₹150
+silver = ₹160
+
+Now we have a conflict.
+
+Which price should the cinema use?
+
+The problem statement doesn’t tell us the rule.
+
+So we need to make an explicit assumption and document it.
+
+For example, we might decide:
+
+If duplicate normalized names have conflicting valid prices, reject the conflicting duplicate rather than silently choosing one.
+
+That’s safer than randomly choosing ₹150 or ₹160.
+
+⸻
+
+3. Prices in inconsistent formats
+
+The input might contain:
+
+150
+"150"
+"150.00"
+"₹150"
+"₹150.50"
+" 150.50 "
+
+Humans understand all of these as money.
+
+Our importer needs to normalize them into one internal representation:
+
+₹150       → 15000 paisa
+₹150.50    → 15050 paisa
+
+Remember our previous decision:
+
+Inside the pricing engine, use integer paisa.
+
+So the importer becomes the bridge:
+
+Messy input
+    ↓
+parse price
+    ↓
+validate price
+    ↓
+convert to paisa
+    ↓
+clean price list
+
+⸻
+
+4. Blank values
+
+Suppose we receive:
+
+Gold,
+
+or:
+
+,250
+
+or:
+
+,
+
+These are incomplete.
+
+We cannot create a valid seat price from them.
+
+So they should go into the rejected records.
+
+For example:
+
+Rejected:
+Gold → missing price
+
+⸻
+
+5. Negative prices
+
+Suppose:
+
+Silver, -100
+
+A cinema ticket cannot have a negative base price.
+
+So:
+
+-₹100
+
+must be rejected.
+
+This is a validation rule.
+
+The importer should say something like:
+
+Rejected:
+Silver, -100
+Reason: price must be greater than or equal to zero
+
+Although I’d recommend requiring strictly positive ticket prices, because a ₹0 seat price probably isn’t a normal paid ticket tier. Whether ₹0 is allowed should be an explicit project decision.
+
+⸻
+
+6. What does “de-duplicated” mean?
+
+Suppose the input is:
+
+Silver, 150
+silver, 150
+SILVER, 150
+Gold, 250
+GOLD, 250
+
+After cleaning:
+
+Silver → ₹150
+Gold   → ₹250
+
+We removed duplicate entries.
+
+That’s deduplication.
+
+And the report should tell us what happened.
+
+For example:
+
+Imported: 5 records
+Accepted: 2 unique seat classes
+Duplicates removed: 3
+Rejected: 0
+
+⸻
+
+7. What does “report what was imported, de-duplicated, and rejected” mean?
+
+This is probably the important part of the twist.
+
+They don’t just want:
+
+Clean price list
+
+They want an audit/report of the cleaning process.
+
+Imagine input:
+
+Silver, ₹150
+silver, 150
+GOLD, ₹250
+Gold, ₹250
+Recliner, 400.00
+Recliner, -500
+VIP,
+
+The output could conceptually be:
+
+CLEAN PRICE LIST
+Silver     ₹150.00
+Gold       ₹250.00
+Recliner   ₹400.00
+IMPORT SUMMARY
+Records received:       7
+Valid records:           5
+Unique classes:           3
+Duplicates removed:      2
+Rejected records:        2
+
+And then:
+
+DUPLICATES
+silver → duplicate of Silver
+Gold   → duplicate of GOLD
+REJECTED
+Recliner, -500
+Reason: negative price
+VIP,
+Reason: missing price
+
+This tells the cinema operator:
+
+“I didn’t just clean your data. Here’s exactly what I accepted, removed, and rejected.”
+
+That’s what trustworthy import means.
+
+⸻
+
+8. Now connect this to our existing project
+
+Previously:
+
+ShowConfig
+   ↓
+Pricing Engine
+
+Now we probably need:
+
+                MESSY PRICE DATA
+                       ↓
+                Price List Importer
+                       ↓
+              Validation / Cleaning
+                 ↙          ↘
+          ACCEPTED         REJECTED
+             ↓                ↓
+       Deduplication       Report
+             ↓
+       Clean Price List
+             ↓
+          ShowConfig
+             ↓
+       Pricing Engine
+             ↓
+        Final Invoice
+
+So there are now two major pieces:
+
+Piece 1 — Import/Cleaning Engine
+
+Its job:
+
+messy data
+   ↓
+parse
+   ↓
+normalize
+   ↓
+validate
+   ↓
+deduplicate
+   ↓
+produce clean prices + report
+
+Piece 2 — Pricing Engine
+
+Its job:
+
+clean prices
+   ↓
+tickets
+   ↓
+festival discount
+   ↓
+member discount + cap
+   ↓
+convenience fee
+   ↓
+GST
+   ↓
+exact final bill
+
+⸻
+
+9. A realistic complete example
+
+Suppose the input file contains:
+
+Silver, ₹150
+silver, 150
+GOLD, ₹250.00
+Gold, 250
+Recliner, 400.50
+recliner, ₹400.50
+VIP,
+Premium, -500
+
+The importer could produce:
+
+Clean data
+
+Silver      ₹150.00
+Gold        ₹250.00
+Recliner    ₹400.50
+
+Duplicates
+
+silver → Silver
+Gold → GOLD
+recliner → Recliner
+
+Rejected
+
+VIP,
+→ missing price
+Premium, -500
+→ negative price
+
+Then the pricing engine can safely receive:
+
+Silver = 15000 paisa
+Gold = 25000 paisa
+Recliner = 40050 paisa
+
+Now pricing can happen safely.
+
+⸻
+
+10. Why did they add this twist?
+
+Because otherwise the project is basically:
+
+“Make a calculator.”
+
+The twist tests whether you can handle real-world dirty input data.
+
+They’re testing whether you can think about:
+
+* parsing
+* normalization
+* validation
+* duplicates
+* conflicting data
+* rejected records
+* error reporting
+* exact money
+* clean separation between importing and pricing
+* auditability
+
+That’s much closer to actual software engineering.
+
+⸻
+
+11. One BIG decision we need to make
+
+The phrase:
+
+“duplicate names (in different cases)”
+
+doesn’t tell us exactly what to do when duplicates have different prices.
+
+Example:
+
+Silver, 150
+silver, 175
+
+They’re clearly the same class, but prices conflict.
+
+We need an explicit rule.
+
+I recommend we do not silently pick one.
+
+A safe rule would be:
+
+Same normalized name + same price
+→ keep one, report duplicate
+Same normalized name + different price
+→ reject the conflicting record and report the conflict
+
+So:
+
+Silver, 150
+silver, 150
+
+becomes:
+
+Silver ₹150
+duplicate: silver ₹150
+
+But:
+
+Silver, 150
+silver, 175
+
+becomes:
+
+Silver ₹150
+rejected: silver ₹175
+reason: conflicting duplicate price
+
+That gives us a deterministic and explainable system.
+
+But this is an assumption, because the problem statement doesn’t specify how conflicting duplicates should be resolved. We should put it in REASONING.md.
+
+⸻
+
+So our project is now:
+
+             ┌──────────────────┐
+             │ Messy Price List  │
+             └────────┬─────────┘
+                      ↓
+             ┌──────────────────┐
+             │ Import + Clean   │
+             └────────┬─────────┘
+                      ↓
+          ┌───────────┴───────────┐
+          ↓                       ↓
+   Clean Price List          Import Report
+          ↓                accepted/duplicates/
+          ↓                   rejected
+   ┌──────────────┐
+   │ Pricing      │
+   │ Engine       │
+   └──────┬───────┘
+          ↓
+     Base Tickets
+          ↓
+     Festival Off
+          ↓
+     Member Off
+          ↓
+     Member Cap
+          ↓
+   Convenience Fee
+          ↓
+         GST
+          ↓
+   Exact Paisa Total
+          ↓
+   Line-by-Line Bill
+
+This means we should NOT immediately tell Antigravity to implement Step 3 from the old prompt. The domain model now needs one additional domain component: a price-list importer/cleaner + import report.
+
+If you want, send me the full updated problem statement after this twist (especially if there are more lines after it), and I’ll modify our Step 2 prompt so Antigravity’s architecture covers the new requirement without overbuilding it.
+
+---
+

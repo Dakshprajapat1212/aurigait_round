@@ -142,17 +142,19 @@ A comprehensive Jest test suite (`34 tests across 3 suites`) covers all business
 Real-world multiplex counters frequently receive messy, inconsistent price lists from cinema distributors or legacy spreadsheets. 
 
 #### **Sanitization & De-Duplication Policy:**
-1. **Case-Insensitive De-Duplication**:
+1. **Case-Insensitive De-Duplication & Conflicting Price Safety**:
    - Tiers like `"Silver"`, `"silver"`, `"SILVER"`, and `"  Silver  "` all normalize to the key `silver`.
-   - **Policy**: The *first valid occurrence* of the tier is accepted and added to the cleaned price list. Subsequent occurrences are marked as `Deduplicated` in the audit report with a reference to the matched canonical tier.
+   - **Same Name + Same Price**: Marked as `Deduplicated` (redundant entry safely ignored, canonical tier retained).
+   - **Same Name + Different Price**: Marked as `Rejected` with an explicit reason (`Conflicting price for tier 'Silver': existing is ₹150.00, incoming is ₹175.00`).
+   - **Rationale**: Silently guessing or overwriting when duplicates have different prices can cause massive revenue losses or customer overcharging. Rejecting conflicts ensures complete financial transparency.
 2. **Inconsistent Price Normalization**:
    - Strings with currency prefixes or suffixes (`₹150.00`, `Rs. 250`, ` 350.50 INR `) are stripped of non-numeric noise and normalized to standard decimal numbers before conversion to integer `Paisa`.
    - Comma decimal separators (e.g. `180,50`) are normalized to `180.50`.
 3. **Blank & Missing Value Guard**:
    - Missing or empty tier names (`null`, `undefined`, `""`, `"   "`) are rejected immediately with descriptive audit messages.
    - Missing or blank prices (`null`, `undefined`, `""`) are rejected immediately.
-4. **Negative Price Rejection**:
-   - Negative prices (`-150`, `"-₹50.00"`) are caught and rejected (`"Price cannot be negative"`), preventing corrupt financial configurations.
+4. **Strictly Positive Price Enforcement (> 0)**:
+   - Free (0) or negative prices (`-150`, `"-₹50.00"`, `0.00`) are rejected (`"Price must be strictly positive (> 0)"`), preventing zero-revenue or negative billing configurations.
 5. **Complete Audit Reporting**:
    - Every import run produces a structured audit report:
      $$\text{totalProcessed} \equiv \text{importedCount} + \text{deduplicatedCount} + \text{rejectedCount}$$

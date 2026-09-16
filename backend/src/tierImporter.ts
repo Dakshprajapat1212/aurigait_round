@@ -10,14 +10,16 @@ import {
 import { Money } from './money';
 
 /**
- * Robust Importer and Sanitizer for messy seat-class price lists.
+ * Robust Importer and Sanitizer for messy seat-class price lists (The Twist).
  * 
- * Handles:
- * - Duplicate names in different cases ("Silver", "silver", "SILVER")
- * - Prices in inconsistent formats ("₹150.00", "Rs. 200", " 350.50 ", 400, "150,50")
- * - Blank or missing values (null, undefined, empty strings)
- * - Negative prices (-100, "-₹50")
- * - Generates an audit report detailing what was imported, de-duplicated, and rejected.
+ * Rules:
+ * 1. Duplicate names in different cases:
+ *    - Same normalized name + same price -> deduplicated (keep original, report duplicate).
+ *    - Same normalized name + conflicting price -> rejected (safely flag price conflict rather than guessing).
+ * 2. Prices must be strictly positive (> 0). Free (0) or negative prices are rejected.
+ * 3. Inconsistent price formats (₹, Rs., INR, whitespace, comma decimals) are normalized into exact integer Paisa.
+ * 4. Blank names or blank prices are rejected with descriptive reasons.
+ * 5. Full audit report detailing accepted unique tiers, duplicates removed, and rejected records.
  */
 export class TierImporter {
   /**
@@ -67,28 +69,41 @@ export class TierImporter {
       if (raw.availableSeats !== undefined && raw.availableSeats !== null && String(raw.availableSeats).trim() !== '') {
         const parsedSeats = parseInt(String(raw.availableSeats).trim(), 10);
         if (isNaN(parsedSeats) || parsedSeats < 0) {
-          rejected.push({ raw, reason: `Invalid availableSeats: '${raw.availableSeats}'. Must be a non-negative integer.` });
+          rejected.push({
+            raw,
+            reason: `Invalid availableSeats: '${raw.availableSeats}'. Must be a non-negative integer.`,
+          });
           continue;
         }
         availableSeats = parsedSeats;
       }
 
-      // 4. De-duplication Check (Case-Insensitive)
+      // 4. Duplicate Name Check (Case-Insensitive)
       if (cleanedTiers[normalizedKey]) {
         const existing = cleanedTiers[normalizedKey];
-        deduplicated.push({
-          raw,
-          normalizedKey,
-          matchedWith: existing.name,
-          reason: `Duplicate tier name '${rawNameStr}' matches already imported tier '${existing.name}' (case-insensitive).`,
-        });
+
+        if (pricePaisa === existing.pricePaisa) {
+          // Exact duplicate (same name + same price) -> Deduplicate
+          deduplicated.push({
+            raw,
+            normalizedKey,
+            matchedWith: existing.name,
+            reason: `Exact duplicate of tier '${existing.name}' with matching price ${Money.toFormattedINR(pricePaisa)}.`,
+          });
+        } else {
+          // Conflicting duplicate (same name + DIFFERENT price) -> Reject conflict safely!
+          rejected.push({
+            raw,
+            reason: `Conflicting price for tier '${existing.name}': existing is ${Money.toFormattedINR(existing.pricePaisa)}, incoming is ${Money.toFormattedINR(pricePaisa)}.`,
+          });
+        }
         continue;
       }
 
-      // 5. Canonical Title-Cased Name
+      // 5. Canonical Title-Cased Name for display
       const canonicalName = rawNameStr.charAt(0).toUpperCase() + rawNameStr.slice(1);
 
-      // Successfully imported
+      // Successfully imported new unique tier
       const tierConfig: SeatTierConfig = {
         name: canonicalName,
         pricePaisa,
@@ -122,6 +137,7 @@ export class TierImporter {
 
   /**
    * Robust price parser converting inconsistent price representations into integer Paisa.
+   * Enforces strictly positive pricing (> 0).
    */
   static parsePriceToPaisa(rawPrice: any): { success: true; paisa: Paisa } | { success: false; error: string } {
     // Number handling
@@ -129,8 +145,11 @@ export class TierImporter {
       if (!isFinite(rawPrice) || isNaN(rawPrice)) {
         return { success: false, error: 'Price is not a finite number' };
       }
-      if (rawPrice < 0) {
-        return { success: false, error: `Price cannot be negative: ${rawPrice}` };
+      if (rawPrice <= 0) {
+        return {
+          success: false,
+          error: rawPrice < 0 ? `Price cannot be negative: ${rawPrice}` : 'Price must be strictly positive (> 0)',
+        };
       }
       return { success: true, paisa: Money.roundHalfUp(rawPrice * 100) };
     }
@@ -161,8 +180,11 @@ export class TierImporter {
 
       try {
         const paisa = Money.fromINR(sanitized);
-        if (paisa < 0) {
-          return { success: false, error: `Price cannot be negative: '${rawPrice}'` };
+        if (paisa <= 0) {
+          return {
+            success: false,
+            error: paisa < 0 ? `Price cannot be negative: '${rawPrice}'` : 'Price must be strictly positive (> 0)',
+          };
         }
         return { success: true, paisa };
       } catch (err: any) {

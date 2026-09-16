@@ -24,14 +24,14 @@ describe('TierImporter (The Twist: Messy Price List Sanitizer)', () => {
     expect(result.cleanedTiers['executive'].pricePaisa).toBe(18050);
   });
 
-  it('de-duplicates tier names case-insensitively and reports duplicates', () => {
+  it('de-duplicates tier names case-insensitively when prices match', () => {
     const rawTiers: RawTierInput[] = [
       { name: 'Silver', price: 150 },
-      { name: 'silver', price: 160 },           // Duplicate lowercase
-      { name: 'SILVER', price: 170 },           // Duplicate uppercase
-      { name: '  Silver  ', price: 180 },       // Duplicate with padding
+      { name: 'silver', price: '150.00' },           // Exact duplicate
+      { name: 'SILVER', price: '₹150' },             // Exact duplicate
+      { name: '  Silver  ', price: ' 150 INR ' },    // Exact duplicate
       { name: 'Gold', price: 250 },
-      { name: 'GOLD', price: 260 },             // Duplicate
+      { name: 'GOLD', price: 'Rs. 250.00' },         // Exact duplicate
     ];
 
     const result = TierImporter.importMessyTiers(rawTiers);
@@ -40,14 +40,33 @@ describe('TierImporter (The Twist: Messy Price List Sanitizer)', () => {
     expect(result.report.deduplicatedCount).toBe(4);
     expect(result.report.rejectedCount).toBe(0);
 
-    // Initial price should be retained
     expect(result.cleanedTiers['silver'].pricePaisa).toBe(15000);
     expect(result.cleanedTiers['gold'].pricePaisa).toBe(25000);
 
     // Verify deduplication audit entries
     expect(result.report.deduplicated[0].matchedWith).toBe('Silver');
-    expect(result.report.deduplicated[1].matchedWith).toBe('Silver');
+    expect(result.report.deduplicated[0].reason).toContain('Exact duplicate');
     expect(result.report.deduplicated[3].matchedWith).toBe('Gold');
+  });
+
+  it('safely rejects conflicting duplicate prices instead of guessing', () => {
+    const rawTiers: RawTierInput[] = [
+      { name: 'Silver', price: 150 },
+      { name: 'silver', price: 175 }, // CONFLICT: ₹175 vs ₹150
+      { name: 'Gold', price: 250 },
+      { name: 'GOLD', price: 300 },   // CONFLICT: ₹300 vs ₹250
+    ];
+
+    const result = TierImporter.importMessyTiers(rawTiers);
+
+    expect(result.report.importedCount).toBe(2); // Silver @ 150, Gold @ 250
+    expect(result.report.deduplicatedCount).toBe(0);
+    expect(result.report.rejectedCount).toBe(2);
+
+    expect(result.report.rejected[0].reason).toContain("Conflicting price for tier 'Silver'");
+    expect(result.report.rejected[0].reason).toContain('existing is ₹150.00, incoming is ₹175.00');
+
+    expect(result.report.rejected[1].reason).toContain("Conflicting price for tier 'Gold'");
   });
 
   it('rejects blank and missing values with specific reasons', () => {
@@ -73,20 +92,22 @@ describe('TierImporter (The Twist: Messy Price List Sanitizer)', () => {
     expect(result.report.rejected[5].reason).toContain('Blank or missing price');
   });
 
-  it('rejects negative prices with explicit error reasons', () => {
+  it('rejects zero and negative prices with explicit error reasons', () => {
     const rawTiers: RawTierInput[] = [
       { name: 'Silver', price: -150 },
       { name: 'Gold', price: '-₹250.00' },
-      { name: 'Recliner', price: ' -50 ' },
+      { name: 'Recliner', price: 0 },
+      { name: 'Free-Pass', price: '0.00' },
     ];
 
     const result = TierImporter.importMessyTiers(rawTiers);
 
     expect(result.report.importedCount).toBe(0);
-    expect(result.report.rejectedCount).toBe(3);
+    expect(result.report.rejectedCount).toBe(4);
     expect(result.report.rejected[0].reason).toContain('Price cannot be negative');
     expect(result.report.rejected[1].reason).toContain('Price cannot be negative');
-    expect(result.report.rejected[2].reason).toContain('Price cannot be negative');
+    expect(result.report.rejected[2].reason).toContain('Price must be strictly positive (> 0)');
+    expect(result.report.rejected[3].reason).toContain('Price must be strictly positive (> 0)');
   });
 
   it('rejects unparseable non-numeric prices', () => {
@@ -106,10 +127,10 @@ describe('TierImporter (The Twist: Messy Price List Sanitizer)', () => {
   it('handles a comprehensive messy batch and audits correctly', () => {
     const messyBatch: RawTierInput[] = [
       { name: 'Silver', price: '₹150.00', availableSeats: 50 }, // Valid #1
-      { name: 'silver', price: 160 },                          // Deduplicated
+      { name: 'silver', price: '150.00' },                     // Exact Duplicate -> deduplicated
       { name: '', price: 200 },                                // Rejected (blank name)
       { name: 'Gold', price: 'Rs. 250', availableSeats: 30 },  // Valid #2
-      { name: 'GOLD', price: '250.00' },                       // Deduplicated
+      { name: 'GOLD', price: '300.00' },                       // Conflicting Duplicate -> rejected!
       { name: 'Recliner', price: -400 },                       // Rejected (negative)
       { name: 'Recliner', price: '₹400.00', availableSeats: 5 }, // Valid #3
       { name: 'VIP', price: '' },                              // Rejected (blank price)
@@ -121,8 +142,8 @@ describe('TierImporter (The Twist: Messy Price List Sanitizer)', () => {
 
     expect(result.report.totalProcessed).toBe(10);
     expect(result.report.importedCount).toBe(4);     // Silver, Gold, Recliner, Club
-    expect(result.report.deduplicatedCount).toBe(2); // silver, GOLD
-    expect(result.report.rejectedCount).toBe(4);     // blank name, negative recliner, blank VIP, invalid club
+    expect(result.report.deduplicatedCount).toBe(1); // silver (150)
+    expect(result.report.rejectedCount).toBe(5);     // blank name, conflicting GOLD (300 vs 250), negative recliner, blank VIP, invalid club
 
     expect(result.report.totalProcessed).toBe(
       result.report.importedCount + result.report.deduplicatedCount + result.report.rejectedCount
@@ -138,7 +159,7 @@ describe('TierImporter (The Twist: Messy Price List Sanitizer)', () => {
     const csv = `
       name, price, availableSeats
       Silver, ₹150.00, 50
-      silver, 160, 50
+      silver, 150, 50
       Gold, Rs. 250, 30
       , 200, 10
       Recliner, -100, 5
